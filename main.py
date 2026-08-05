@@ -22,6 +22,7 @@ Thread safety:
     the stream generator — both on the event loop, so no race condition.
 """
 
+from fastapi.staticfiles import StaticFiles
 import asyncio
 import io
 import time
@@ -54,6 +55,7 @@ from config import (
     TELEGRAM_ADMIN_ID,
     TELEGRAM_WEBHOOK_URL,
     UNKNOWN_COOLDOWN_SEC,
+    AUTO_ENROLL_UNKNOWN_FACES,
 )
 from vision import RecognitionResult, engine
 
@@ -109,6 +111,7 @@ async def lifespan(app: FastAPI):
             "but the bot cannot receive button/text replies without a webhook or polling."
         )
 
+    logger.info("CORS and Static Files initialized successfully.")
     yield  # ── Server is live ─────────────────────────────────────────────────
 
     logger.info("=== Smart Face Recognition Security System — Shutting Down ===")
@@ -131,16 +134,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+import os
+if not os.path.exists("snapshots"):
+    os.makedirs("snapshots")
+app.mount("/snapshots", StaticFiles(directory="snapshots"), name="snapshots")
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],   # Tighten this in production (e.g., your dashboard domain)
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Serve saved snapshots as static files for the dashboard thumbnail display
-app.mount("/snapshots", StaticFiles(directory=str(SNAPSHOTS_DIR)), name="snapshots")
 
 
 # ── Background Processing Loop ─────────────────────────────────────────────────
@@ -273,6 +278,44 @@ async def _handle_unknown_face(result: RecognitionResult, frame: np.ndarray) -> 
     # Save the snapshot
     snapshot_path = _save_snapshot(frame, "unknown")
     if snapshot_path is None:
+        return
+
+    if AUTO_ENROLL_UNKNOWN_FACES:
+        ts_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+        auto_name = f"AutoUser_{ts_str}"
+        try:
+            person_id = await database.add_person(
+                name=auto_name,
+                embedding=result.embedding,
+                snapshot_path=str(snapshot_path),
+            )
+            
+            # Log event as Known since they are now enrolled
+            event_id = await database.log_event(
+                snapshot_path=str(snapshot_path),
+                status="Known",
+                person_id=person_id,
+            )
+            
+            # Mark the buffer status so it doesn't stay 'pending'
+            await database.update_event_buffer_status(event_id, "added")
+
+            # Reload VisionEngine cache
+            persons = await database.get_all_persons_with_embeddings()
+            engine.load_known_persons(persons)
+            
+            logger.info("Auto-enrolled unknown face as id={} name={}", person_id, auto_name)
+            
+            # Send Telegram alert
+            await bot.send_text_to_admin(
+                f"🤖 <b>Auto-Enrollment Triggered</b>\n\n"
+                f"👤 <b>Name:</b> {auto_name}\n"
+                f"🆔 <b>Person ID:</b> {person_id}\n\n"
+                f"<i>This person was automatically enrolled into the database.</i>"
+            )
+        except Exception as exc:
+            logger.error("Auto-enrollment failed: {}", exc)
+            
         return
 
     # Create the event record
@@ -475,7 +518,12 @@ async def get_events(limit: int = 50):
 @app.get("/api/persons", summary="List known persons")
 async def list_persons():
     """Return all active known persons (no embeddings — safe for API consumers)."""
-    return await database.get_all_persons()
+    try:
+        persons = await database.get_all_persons()
+        return persons
+    except Exception as exc:
+        logger.error(f"Failed to load persons list: {exc}")
+        return []
 
 
 @app.post("/api/events/{event_id}/register_person", summary="Register unknown person from event")

@@ -25,7 +25,7 @@ import cv2
 import numpy as np
 from loguru import logger
 
-from config import FACE_DETECT_THRESHOLD, FACE_MATCH_THRESHOLD, MODEL_DIR
+from config import FACE_DETECT_THRESHOLD, FACE_MATCH_THRESHOLD, MODEL_DIR, USE_YOLO_PREFILTER
 
 # Lazy import — allows the rest of the app to start even if insightface
 # is not installed (useful for CI/CD or dashboard-only deployments).
@@ -38,6 +38,13 @@ except ImportError:
         "insightface not installed. Face recognition will be disabled. "
         "Run: pip install insightface"
     )
+
+try:
+    from ultralytics import YOLO
+    YOLO_AVAILABLE = True
+except ImportError:
+    YOLO_AVAILABLE = False
+    logger.warning("ultralytics not installed. YOLOv8 pre-filter will be disabled.")
 
 
 # ── Data Classes ───────────────────────────────────────────────────────────────
@@ -78,6 +85,7 @@ class VisionEngine:
         self._known_persons: list[KnownPerson] = []
         # Pre-normalised embedding matrix — shape (N, 512) — for vectorised dot product
         self._embeddings_matrix: Optional[np.ndarray] = None
+        self._yolo = None
         self._initialized = False
 
     # ── Initialisation ─────────────────────────────────────────────────────────
@@ -105,6 +113,22 @@ class VisionEngine:
             det_thresh=FACE_DETECT_THRESHOLD,
             det_size=(640, 640),
         )
+
+        # Initialize YOLOv8 pre-filter if enabled
+        if USE_YOLO_PREFILTER:
+            if YOLO_AVAILABLE:
+                logger.info("Initialising YOLOv8 for person detection pre-filtering...")
+                try:
+                    import torch
+                    device = "mps" if torch.backends.mps.is_available() else "cpu"
+                except ImportError:
+                    device = "cpu"
+                self._yolo = YOLO(str(MODEL_DIR / 'yolov8n.pt'))
+                self._yolo.to(device)
+                logger.info("YOLOv8 initialized on device: {}", device)
+            else:
+                logger.warning("USE_YOLO_PREFILTER is True but ultralytics is not available.")
+
         self._initialized = True
         logger.info("VisionEngine (InsightFace buffalo_l) initialised successfully.")
 
@@ -175,6 +199,22 @@ class VisionEngine:
             return []
 
         t0 = time.perf_counter()
+
+        # --- YOLOv8 Pre-filter ---
+        if USE_YOLO_PREFILTER and self._yolo is not None:
+            # class 0 is 'person' in COCO
+            yolo_results = self._yolo.predict(frame, classes=[0], verbose=False)
+            person_detected = False
+            for res in yolo_results:
+                if len(res.boxes) > 0:
+                    person_detected = True
+                    break
+            
+            if not person_detected:
+                # Skip heavy face recognition if no person is detected
+                elapsed_ms = (time.perf_counter() - t0) * 1000
+                logger.debug("process_frame: YOLO pre-filter - no person detected ({:.1f} ms)", elapsed_ms)
+                return []
 
         # --- LOW LIGHT ENHANCEMENT (CLAHE) ---
         lab = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)

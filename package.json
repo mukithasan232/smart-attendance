@@ -3,5 +3,8 @@
   "private": true,
   "scripts": {
     "dev:all": "cd frontend && npm run dev:all"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.4"
   }
 }
