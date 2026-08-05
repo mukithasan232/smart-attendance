@@ -17,12 +17,15 @@ Unrecognized individuals trigger instant Telegram alerts with actionable buttons
 ## ✨ Key Features
 
 - 🎥 **Live Stream & Detection**: Supports RTSP IP cameras and built-in webcams with real-time bounding boxes and identification overlays.
-- 🧠 **Advanced AI Vision**: Powered by InsightFace `buffalo_l` (512-D embeddings) for highly accurate face detection and recognition.
-- 🍎 **Apple Silicon Optimised**: Leverages CoreML ONNX providers and thermal optimizations (frame skipping, FPS limiters) for cool, fanless operation on MacBooks.
+- 🧠 **Advanced AI Vision**: Powered by InsightFace `buffalo_l` (512-D embeddings) for highly accurate face recognition.
+- 🎯 **YOLOv8 Pre-filtering**: Uses YOLOv8 to quickly detect persons before running heavy face recognition models, significantly saving CPU/GPU cycles.
+- 🏎️ **Hardware Acceleration**: Automatic TensorRT `.engine` export and execution on NVIDIA GPUs, with MPS fallback for Apple Silicon and CoreML ONNX providers.
+- ⚡ **Zero-Latency Architecture**: In-memory embedding caching and asynchronous background tasks for DB/Telegram ensure the live feed never drops frames.
+- 🤖 **Auto-Enrollment (Optional)**: Automatically enrolls and learns unknown faces with built-in cooldown logic to prevent duplicates.
 - 💻 **Modern Web Dashboard**: A Next.js frontend to view the live camera feed, browse event logs, and manage registered persons.
 - 📱 **Telegram Bot Integration**: Instantly sends snapshots of "Unknown" faces to an admin chat with 1-tap `[Add as Known]` or `[Ignore]` controls.
 - 🛡️ **Quality & Blur Filtering**: Advanced Laplacian variance and bounding box size filtering ensures only clear, high-quality faces are logged and alerted.
-- 🗄️ **Local SQLite Database**: Lightning-fast async database operations, ensuring zero blocking on the AI processing thread.
+- 🗄️ **Local SQLite Database**: Lightning-fast async database operations via `aiosqlite`.
 
 ---
 
@@ -30,8 +33,8 @@ Unrecognized individuals trigger instant Telegram alerts with actionable buttons
 
 ### Backend
 * **Language:** Python 3.10+
-* **Framework:** FastAPI
-* **AI/CV:** InsightFace, OpenCV, ONNX Runtime
+* **Framework:** FastAPI & Asyncio
+* **AI/CV:** InsightFace, YOLOv8 (Ultralytics), TensorRT, OpenCV, ONNX Runtime
 * **Database:** aiosqlite (SQLite)
 * **Messaging:** aiogram (Telegram Bot)
 
@@ -149,10 +152,12 @@ If you experience flickering or slow detection, you can fine-tune the system in 
 
 | Variable | Default | Description |
 |---|---|---|
-| `FACE_MATCH_THRESHOLD` | `0.5` | The tolerance for matching faces. Lower (e.g., 0.4) is stricter, higher (e.g., 0.6) is more forgiving to angles/lighting. |
+| `FACE_MATCH_THRESHOLD` | `0.5` | The tolerance for matching faces. Lower (e.g., 0.4) is stricter, higher (e.g., 0.6) is more forgiving. |
 | `FACE_DETECT_THRESHOLD` | `0.5` | Minimum confidence score for the AI to consider a shape a face. |
-| `UNKNOWN_COOLDOWN_SEC` | `120` | Seconds to wait before alerting about the *same* unknown person standing in frame to prevent spam. |
+| `UNKNOWN_COOLDOWN_SEC` | `120` | Seconds to wait before alerting about the *same* unknown person to prevent spam. |
 | `FRAME_SKIP` | `4` | Processes every Nth frame. Higher = cooler CPU, Lower = smoother tracking. |
+| `USE_YOLO_PREFILTER` | `True` | Run YOLOv8 person detection before face recognition to save processing power. |
+| `AUTO_ENROLL_UNKNOWN_FACES`| `False` | Automatically save and learn unknown faces without manual Telegram approval. |
 
 *(Advanced blur and bounding box size thresholds are configured directly in `main.py`).*
 

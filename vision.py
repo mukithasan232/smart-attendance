@@ -120,12 +120,38 @@ class VisionEngine:
                 logger.info("Initialising YOLOv8 for person detection pre-filtering...")
                 try:
                     import torch
-                    device = "mps" if torch.backends.mps.is_available() else "cpu"
-                except ImportError:
-                    device = "cpu"
-                self._yolo = YOLO(str(MODEL_DIR / 'yolov8n.pt'))
-                self._yolo.to(device)
-                logger.info("YOLOv8 initialized on device: {}", device)
+                    engine_path = MODEL_DIR / 'yolov8n.engine'
+                    pt_path = MODEL_DIR / 'yolov8n.pt'
+                    
+                    if engine_path.exists():
+                        self._yolo = YOLO(str(engine_path), task='detect')
+                        logger.info("YOLOv8 initialized using TensorRT engine.")
+                    else:
+                        self._yolo = YOLO(str(pt_path))
+                        device = "cpu"
+                        if torch.cuda.is_available():
+                            device = "cuda"
+                            logger.info("CUDA detected. Exporting YOLOv8 to TensorRT engine for future runs...")
+                            try:
+                                # Export to TensorRT; this might take a minute the first time
+                                self._yolo.export(format="engine", device=device, half=True, workspace=2)
+                                if engine_path.exists():
+                                    self._yolo = YOLO(str(engine_path), task='detect')
+                                    logger.info("YOLOv8 successfully switched to TensorRT engine.")
+                            except Exception as e:
+                                logger.warning(f"Failed to export YOLO to TensorRT: {e}")
+                                self._yolo.to(device)
+                        elif hasattr(torch.backends, 'mps') and torch.backends.mps.is_available():
+                            device = "mps"
+                            self._yolo.to(device)
+                        else:
+                            self._yolo.to(device)
+                            
+                        logger.info("YOLOv8 initialized on device: {}", device)
+                except Exception as e:
+                    logger.warning(f"Error loading YOLO with torch: {e}. Falling back to basic load.")
+                    self._yolo = YOLO(str(MODEL_DIR / 'yolov8n.pt'))
+                    logger.info("YOLOv8 initialized on device: cpu (fallback)")
             else:
                 logger.warning("USE_YOLO_PREFILTER is True but ultralytics is not available.")
 
@@ -181,6 +207,27 @@ class VisionEngine:
         logger.info(
             "Known persons loaded into VisionEngine: {} registered", len(self._known_persons)
         )
+
+    def add_known_person(self, person_id: int, name: str, embedding: np.ndarray) -> None:
+        """
+        Dynamically append a new person to the in-memory cache without a full reload.
+        Used for zero-latency auto-enrollment.
+        """
+        new_person = KnownPerson(person_id=person_id, name=name, embedding=embedding)
+        self._known_persons.append(new_person)
+        
+        # Prepare the new normalized embedding row
+        emb = embedding.astype(np.float32)
+        norm = np.linalg.norm(emb)
+        norm_emb = (emb / norm) if norm > 0 else emb
+        norm_emb = norm_emb.reshape(1, -1)
+        
+        if self._embeddings_matrix is None:
+            self._embeddings_matrix = norm_emb
+        else:
+            self._embeddings_matrix = np.vstack([self._embeddings_matrix, norm_emb])
+            
+        logger.info("Dynamically added id={} ({}) to VisionEngine cache. Total: {}", person_id, name, len(self._known_persons))
 
     # ── Core Processing ────────────────────────────────────────────────────────
 

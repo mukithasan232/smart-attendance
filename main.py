@@ -141,7 +141,12 @@ app.mount("/snapshots", StaticFiles(directory="snapshots"), name="snapshots")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000"],
+    allow_origins=[
+        "http://localhost:3000", 
+        "http://127.0.0.1:3000",
+        "https://vision.codernest.cloud",
+        "https://smart-attendance-blush.vercel.app"
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -192,9 +197,9 @@ async def processing_loop() -> None:
             if result.embedding is None:
                 continue
             if result.is_known:
-                await _handle_known_face(result, frame)
+                asyncio.create_task(_handle_known_face(result, frame.copy()))
             else:
-                await _handle_unknown_face(result, frame)
+                asyncio.create_task(_handle_unknown_face(result, frame.copy()))
 
 
 async def _handle_known_face(result: RecognitionResult, frame: np.ndarray) -> None:
@@ -271,7 +276,10 @@ async def _handle_unknown_face(result: RecognitionResult, frame: np.ndarray) -> 
     # Cooldown check — one zone key for now; extend to spatial zones later
     zone_key = "default"
     now = time.monotonic()
-    if now - _last_unknown_alert.get(zone_key, 0) < UNKNOWN_COOLDOWN_SEC:
+    
+    # Short 5-sec cooldown if auto-enrolling to prevent duplicate tasks before cache is updated
+    cooldown = 5 if AUTO_ENROLL_UNKNOWN_FACES else UNKNOWN_COOLDOWN_SEC
+    if now - _last_unknown_alert.get(zone_key, 0) < cooldown:
         return
     _last_unknown_alert[zone_key] = now
 
@@ -300,9 +308,8 @@ async def _handle_unknown_face(result: RecognitionResult, frame: np.ndarray) -> 
             # Mark the buffer status so it doesn't stay 'pending'
             await database.update_event_buffer_status(event_id, "added")
 
-            # Reload VisionEngine cache
-            persons = await database.get_all_persons_with_embeddings()
-            engine.load_known_persons(persons)
+            # Zero-latency cache update
+            engine.add_known_person(person_id, auto_name, result.embedding)
             
             logger.info("Auto-enrolled unknown face as id={} name={}", person_id, auto_name)
             
@@ -475,9 +482,8 @@ async def _register_person_from_telegram(data: dict) -> None:
     # Mark the alert as resolved
     await database.update_event_buffer_status(event_id, "added")
 
-    # Hot-reload the VisionEngine cache (takes effect on next processed frame)
-    persons = await database.get_all_persons_with_embeddings()
-    engine.load_known_persons(persons)
+    # Hot-reload the VisionEngine cache (zero-latency)
+    engine.add_known_person(person_id, name, embedding)
 
     logger.info("Registered via Telegram | id={} name={}", person_id, name)
 
@@ -566,9 +572,8 @@ async def register_person_from_event(event_id: int, req: RegisterPersonRequest):
     # Update the event's status to Known and link to the new person
     await database.update_event_status_and_person(event_id, "Known", person_id)
 
-    # Reload VisionEngine cache
-    persons = await database.get_all_persons_with_embeddings()
-    engine.load_known_persons(persons)
+    # Zero-latency cache update
+    engine.add_known_person(person_id, req.name, embedding)
 
     return {
         "message": f"Successfully registered '{req.name}' and updated the event.",
@@ -618,9 +623,8 @@ async def upload_person(
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    # Reload VisionEngine cache
-    persons = await database.get_all_persons_with_embeddings()
-    engine.load_known_persons(persons)
+    # Zero-latency cache update
+    engine.add_known_person(person_id, name, embedding)
 
     return {
         "message": f"'{name}' registered successfully.",

@@ -65,7 +65,13 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
 
 /* ── Page shell ──────────────────────────────────────────────────────────── */
-.app-body { background: var(--bg-base); min-height: 100vh; display: flex; }
+.app-body { 
+  background: var(--bg-base); 
+  min-height: 100vh; 
+  width: 100vw;
+  overflow-x: hidden;
+  display: flex; 
+}
 
 .page-root {
   display: flex;
@@ -85,6 +91,12 @@ body {
   position: sticky;
   top: 0;
   z-index: 40;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    display: none;
+  }
 }
 
 .sidebar-header {
@@ -748,9 +760,17 @@ body {
 /* ── Auth Pages ───────────────────────────────────────────────────────────── */
 .auth-layout {
   display: flex;
+  flex-direction: column;
   min-height: 100vh;
+  flex: 1;
   width: 100%;
   background: var(--bg-surface);
+}
+
+@media (min-width: 1024px) {
+  .auth-layout {
+    flex-direction: row;
+  }
 }
 
 .auth-form-section {
@@ -758,14 +778,18 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 40px;
-  max-width: 500px;
-  margin: 0 auto;
+  align-items: center;
+  padding: 40px 24px;
   width: 100%;
 }
 
+.auth-form-section > * {
+  width: 100%;
+  max-width: 400px;
+}
+
 .auth-banner-section {
-  flex: 1;
+  flex: 1.2;
   display: none;
   position: relative;
   overflow: hidden;
