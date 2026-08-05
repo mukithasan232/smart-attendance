@@ -1,0 +1,7 @@
+{
+  "name": "smart-attendance",
+  "private": true,
+  "scripts": {
+    "dev:all": "cd frontend && npm run dev:all"
+  }
+}

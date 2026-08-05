@@ -1,0 +1,36 @@
+# Smart Face Recognition Security System — Python Dependencies
+# Install: pip install -r requirements.txt
+
+# ── Web Framework ──────────────────────────────────────────────────────────────
+fastapi==0.115.14
+uvicorn[standard]==0.35.0
+python-multipart==0.0.20  # for file uploads
+
+# ── Environment ────────────────────────────────────────────────────────────────
+python-dotenv==1.1.1
+
+# ── Computer Vision ────────────────────────────────────────────────────────────
+opencv-python-headless==4.11.0.86
+
+# ── AI / Face Recognition ──────────────────────────────────────────────────────
+insightface==0.7.3
+onnxruntime==1.22.0         # CPU fallback; swap for onnxruntime-silicon on Apple M-series
+
+# ── Database ───────────────────────────────────────────────────────────────────
+aiosqlite==0.21.0
+
+# ── Telegram Bot ───────────────────────────────────────────────────────────────
+python-telegram-bot==22.8
+
+# ── HTTP Client ────────────────────────────────────────────────────────────────
+httpx==0.28.1
+aiofiles==24.1.0
+
+# ── Image Processing ───────────────────────────────────────────────────────────
+Pillow==11.2.1
+
+# ── Numerical ──────────────────────────────────────────────────────────────────
+numpy==2.2.6
+
+# ── Logging ────────────────────────────────────────────────────────────────────
+loguru==0.7.3
