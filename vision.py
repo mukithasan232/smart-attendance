@@ -61,12 +61,7 @@ class RecognitionResult:
     det_score: float = 0.0                   # Detection score from InsightFace
 
 
-@dataclass
-class KnownPerson:
-    """In-memory representation of a registered person."""
-    person_id: int
-    name: str
-    embedding: np.ndarray
+# (KnownPerson class removed, as we don't cache in-memory anymore)
 
 
 # ── Vision Engine ──────────────────────────────────────────────────────────────
@@ -82,9 +77,6 @@ class VisionEngine:
 
     def __init__(self) -> None:
         self._app: Optional["FaceAnalysis"] = None
-        self._known_persons: list[KnownPerson] = []
-        # Pre-normalised embedding matrix — shape (N, 512) — for vectorised dot product
-        self._embeddings_matrix: Optional[np.ndarray] = None
         self._yolo = None
         self._initialized = False
 
@@ -173,61 +165,10 @@ class VisionEngine:
         except ImportError:
             return ["CPUExecutionProvider"]
 
-    # ── Known Person Cache ─────────────────────────────────────────────────────
-
-    def load_known_persons(self, persons: list[dict]) -> None:
-        """
-        Populate the in-memory embedding cache from DB records.
-
-        Call this at startup and after every new person is registered.
-
-        Args:
-            persons: list of dicts from database.get_all_persons_with_embeddings()
-                     Each dict must have: { id, name, embedding: np.ndarray }
-        """
-        self._known_persons = [
-            KnownPerson(
-                person_id=p["id"],
-                name=p["name"],
-                embedding=p["embedding"],
-            )
-            for p in persons
-        ]
-
-        if self._known_persons:
-            # Stack all embeddings into a (N, 512) matrix
-            matrix = np.stack([p.embedding for p in self._known_persons])
-            # L2-normalise each row so dot product == cosine similarity
-            norms = np.linalg.norm(matrix, axis=1, keepdims=True)
-            norms = np.where(norms == 0, 1.0, norms)  # avoid divide-by-zero
-            self._embeddings_matrix = matrix / norms
-        else:
-            self._embeddings_matrix = None
-
-        logger.info(
-            "Known persons loaded into VisionEngine: {} registered", len(self._known_persons)
-        )
-
-    def add_known_person(self, person_id: int, name: str, embedding: np.ndarray) -> None:
-        """
-        Dynamically append a new person to the in-memory cache without a full reload.
-        Used for zero-latency auto-enrollment.
-        """
-        new_person = KnownPerson(person_id=person_id, name=name, embedding=embedding)
-        self._known_persons.append(new_person)
-        
-        # Prepare the new normalized embedding row
-        emb = embedding.astype(np.float32)
-        norm = np.linalg.norm(emb)
-        norm_emb = (emb / norm) if norm > 0 else emb
-        norm_emb = norm_emb.reshape(1, -1)
-        
-        if self._embeddings_matrix is None:
-            self._embeddings_matrix = norm_emb
-        else:
-            self._embeddings_matrix = np.vstack([self._embeddings_matrix, norm_emb])
-            
-        logger.info("Dynamically added id={} ({}) to VisionEngine cache. Total: {}", person_id, name, len(self._known_persons))
+    # ── Database Matching ──────────────────────────────────────────────────────
+    
+    # We no longer cache embeddings in-memory. 
+    # pgvector handles this directly in PostgreSQL.
 
     # ── Core Processing ────────────────────────────────────────────────────────
 
@@ -324,35 +265,21 @@ class VisionEngine:
             det_score=det_score,
         )
 
-        if self._embeddings_matrix is None or not self._known_persons:
-            return base_result  # No known persons registered yet
-
-        # Vectorised cosine similarities — query is already unit-normalised
-        # Shape: (N,) — one similarity score per known person
-        similarities = self._embeddings_matrix @ query_emb
-        best_idx = int(np.argmax(similarities))
-        best_sim = float(similarities[best_idx])
-
-        logger.debug(
-            "Best match: {} (id={}) sim={:.4f} threshold={}",
-            self._known_persons[best_idx].name,
-            self._known_persons[best_idx].person_id,
-            best_sim,
-            FACE_MATCH_THRESHOLD,
-        )
-
-        # Convert threshold: FACE_MATCH_THRESHOLD is a "distance" (0=identical, 1=opposite)
-        # We match if cosine similarity >= (1 - threshold)
-        match_sim_threshold = 1.0 - FACE_MATCH_THRESHOLD
-
-        if best_sim >= match_sim_threshold:
-            person = self._known_persons[best_idx]
+        import database
+        match = database.find_matching_person(query_emb, FACE_MATCH_THRESHOLD)
+        
+        if match:
+            pid, name, conf = match
+            logger.debug(
+                "Best match: {} (id={}) sim={:.4f} threshold={}",
+                name, pid, conf, FACE_MATCH_THRESHOLD
+            )
             return RecognitionResult(
                 bbox=(x1, y1, x2, y2),
                 embedding=query_emb,
-                matched_person_id=person.person_id,
-                matched_name=person.name,
-                confidence=best_sim,
+                matched_person_id=pid,
+                matched_name=name,
+                confidence=conf,
                 is_known=True,
                 det_score=det_score,
             )

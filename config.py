@@ -90,6 +90,11 @@ TENANT_ID: str = os.getenv("TENANT_ID", "default")
 
 # ── Paths ──────────────────────────────────────────────────────────────────────
 DB_PATH: Path = Path(os.getenv("DB_PATH", "./security.db"))
+
+# ── Supabase (PostgreSQL + Storage) ───────────────────────────────────────────
+DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
 SNAPSHOTS_DIR: Path = Path(os.getenv("SNAPSHOTS_DIR", "./snapshots"))
 MODEL_DIR: Path = Path(os.getenv("MODEL_DIR", "./models"))
 

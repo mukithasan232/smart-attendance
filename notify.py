@@ -10,7 +10,7 @@ Usage:
     await send_email_alert(
         subject="🚨 Unknown Person Detected",
         body="An unregistered face was detected at 10:45 AM.",
-        image_path=Path("./snapshots/unknown_20260807_104500.jpg"),
+        image_path="http://.../snapshot.jpg",
     )
 """
 
@@ -47,7 +47,7 @@ def _build_message(
     body: str,
     from_addr: str,
     to_emails: list[str],
-    image_path: Optional[Path] = None,
+    image_path: Optional[str] = None,
 ) -> MIMEMultipart:
     """Construct a MIME email message, optionally attaching a JPEG snapshot."""
     msg = MIMEMultipart("related")
@@ -56,12 +56,14 @@ def _build_message(
     msg["To"] = ", ".join(to_emails)
 
     # HTML body with optional inline image
-    if image_path and image_path.exists():
+    if image_path:
+        is_url = image_path.startswith("http")
+        img_tag = f'<img src="{image_path}" style="max-width:600px;border-radius:8px;" />' if is_url else '<img src="cid:snapshot" style="max-width:600px;border-radius:8px;" />'
         html_body = f"""
         <html><body>
           <p style="font-family:sans-serif;font-size:14px;">{body}</p>
           <br/>
-          <img src="cid:snapshot" style="max-width:600px;border-radius:8px;" />
+          {img_tag}
         </body></html>
         """
     else:
@@ -73,16 +75,18 @@ def _build_message(
 
     msg.attach(MIMEText(html_body, "html"))
 
-    # Attach snapshot as inline image
-    if image_path and image_path.exists():
-        try:
-            with open(image_path, "rb") as f:
-                img = MIMEImage(f.read(), name=image_path.name)
-            img.add_header("Content-ID", "<snapshot>")
-            img.add_header("Content-Disposition", "inline", filename=image_path.name)
-            msg.attach(img)
-        except Exception as exc:
-            logger.warning("Could not attach snapshot to email: {}", exc)
+    # Attach snapshot as inline image if it's a local file
+    if image_path and not image_path.startswith("http"):
+        p = Path(image_path)
+        if p.exists():
+            try:
+                with open(p, "rb") as f:
+                    img = MIMEImage(f.read(), name=p.name)
+                img.add_header("Content-ID", "<snapshot>")
+                img.add_header("Content-Disposition", "inline", filename=p.name)
+                msg.attach(img)
+            except Exception as exc:
+                logger.warning("Could not attach snapshot to email: {}", exc)
 
     return msg
 
@@ -107,7 +111,7 @@ def _send_sync(cfg: dict, msg: MIMEMultipart) -> None:
 async def send_email_alert(
     subject: str,
     body: str,
-    image_path: Optional[Path] = None,
+    image_path: Optional[str] = None,
 ) -> bool:
     """
     Send an email alert asynchronously.

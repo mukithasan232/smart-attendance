@@ -59,8 +59,13 @@ from config import (
     AUTO_ENROLL_UNKNOWN_FACES,
     SMTP_ALERT_UNKNOWN,
     SMTP_ALERT_KNOWN,
+    SUPABASE_URL,
+    SUPABASE_KEY,
 )
 from vision import RecognitionResult, engine
+
+from supabase import create_client, Client
+supabase: Optional[Client] = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
 # ── Shared state ───────────────────────────────────────────────────────────────
 camera: Optional[RTSPCamera] = None
@@ -92,12 +97,9 @@ async def lifespan(app: FastAPI):
     await database.init_db()
     await database.ensure_embedding_column()  # idempotent schema migration
 
-    # 2. Load all known persons into the VisionEngine cache
-    persons = await database.get_all_persons_with_embeddings()
     engine.initialize()
-    engine.load_known_persons(persons)
 
-    # 3. Start the RTSP camera reader thread
+    # 2. Start the RTSP camera reader thread
     camera = RTSPCamera()
     camera.start()
 
@@ -228,9 +230,9 @@ async def _handle_known_face(result: RecognitionResult, frame: np.ndarray) -> No
         return
 
     await database.log_event(
-        snapshot_path=str(snapshot_path),
+        snapshot_path=snapshot_path,
         status="Known",
-        person_id=person_id,
+        person_id=result.matched_person_id,
     )
     logger.info(
         "Known person recognised | name={} confidence={:.3f}",
@@ -313,12 +315,12 @@ async def _handle_unknown_face(result: RecognitionResult, frame: np.ndarray) -> 
             person_id = await database.add_person(
                 name=auto_name,
                 embedding=result.embedding,
-                snapshot_path=str(snapshot_path),
+                snapshot_path=snapshot_path,
             )
             
             # Log event as Known since they are now enrolled
             event_id = await database.log_event(
-                snapshot_path=str(snapshot_path),
+                snapshot_path=snapshot_path,
                 status="Known",
                 person_id=person_id,
             )
@@ -326,8 +328,8 @@ async def _handle_unknown_face(result: RecognitionResult, frame: np.ndarray) -> 
             # Mark the buffer status so it doesn't stay 'pending'
             await database.update_event_buffer_status(event_id, "added")
 
-            # Zero-latency cache update
-            engine.add_known_person(person_id, auto_name, result.embedding)
+            # Zero-latency cache update (no longer needed for pgvector)
+            pass
             
             logger.info("Auto-enrolled unknown face as id={} name={}", person_id, auto_name)
             
@@ -345,7 +347,7 @@ async def _handle_unknown_face(result: RecognitionResult, frame: np.ndarray) -> 
 
     # Create the event record
     event_id = await database.log_event(
-        snapshot_path=str(snapshot_path),
+        snapshot_path=snapshot_path,
         status="Unknown",
         person_id=None,
     )
@@ -379,13 +381,31 @@ async def _handle_unknown_face(result: RecognitionResult, frame: np.ndarray) -> 
         ))
 
 
-def _save_snapshot(frame: np.ndarray, prefix: str) -> Optional[Path]:
-    """Save a frame as JPEG to the snapshots directory. Returns the path or None."""
+def _save_snapshot(frame: np.ndarray, prefix: str) -> Optional[str]:
+    """Save a frame as JPEG to Supabase Storage (or fallback to local). Returns the public URL or path."""
     try:
         ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-        path = SNAPSHOTS_DIR / f"{prefix}_{ts}.jpg"
-        cv2.imwrite(str(path), frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
-        return path
+        filename = f"{prefix}_{ts}.jpg"
+        
+        success, encoded = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        if not success:
+            logger.error("Failed to encode frame to JPEG")
+            return None
+            
+        byte_data = encoded.tobytes()
+        
+        if supabase:
+            supabase.storage.from_('snapshots').upload(
+                path=filename,
+                file=byte_data,
+                file_options={"content-type": "image/jpeg"}
+            )
+            return supabase.storage.from_('snapshots').get_public_url(filename)
+        else:
+            path = SNAPSHOTS_DIR / filename
+            with open(path, "wb") as f:
+                f.write(byte_data)
+            return str(path)
     except Exception as exc:
         logger.error("Snapshot save failed: {}", exc)
         return None
@@ -516,7 +536,7 @@ async def _register_person_from_telegram(data: dict) -> None:
     await database.update_event_buffer_status(event_id, "added")
 
     # Hot-reload the VisionEngine cache (zero-latency)
-    engine.add_known_person(person_id, name, embedding)
+    # With pgvector, no need to add_known_person to cache
 
     logger.info("Registered via Telegram | id={} name={}", person_id, name)
 
@@ -606,7 +626,7 @@ async def register_person_from_event(event_id: int, req: RegisterPersonRequest):
     await database.update_event_status_and_person(event_id, "Known", person_id)
 
     # Zero-latency cache update
-    engine.add_known_person(person_id, req.name, embedding)
+    # With pgvector, no need to add_known_person to cache
 
     return {
         "message": f"Successfully registered '{req.name}' and updated the event.",
@@ -642,10 +662,26 @@ async def upload_person(
             detail="No face detected in the uploaded image. Please use a clear, well-lit photo.",
         )
 
-    # Save the registration photo as the person's gallery thumbnail
+    # Save the registration photo to Supabase or fallback
     ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
-    snapshot_path = SNAPSHOTS_DIR / f"registered_{ts}.jpg"
-    cv2.imwrite(str(snapshot_path), frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
+    filename = f"registered_{ts}.jpg"
+    
+    success, encoded = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
+    if success and supabase:
+        try:
+            supabase.storage.from_('snapshots').upload(
+                path=filename,
+                file=encoded.tobytes(),
+                file_options={"content-type": "image/jpeg"}
+            )
+            snapshot_path = supabase.storage.from_('snapshots').get_public_url(filename)
+        except Exception as e:
+            logger.error(f"Supabase upload failed: {e}. Falling back to local.")
+            snapshot_path = str(SNAPSHOTS_DIR / filename)
+            cv2.imwrite(snapshot_path, frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
+    else:
+        snapshot_path = str(SNAPSHOTS_DIR / filename)
+        cv2.imwrite(snapshot_path, frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
 
     try:
         person_id = await database.add_person(
@@ -656,8 +692,7 @@ async def upload_person(
     except Exception as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    # Zero-latency cache update
-    engine.add_known_person(person_id, name, embedding)
+    # With pgvector, we no longer need to update the in-memory cache
 
     return {
         "message": f"'{name}' registered successfully.",
@@ -676,18 +711,13 @@ async def delete_person(person_id: int):
     if not deleted:
         raise HTTPException(status_code=404, detail=f"Person #{person_id} not found.")
 
-    persons = await database.get_all_persons_with_embeddings()
-    engine.load_known_persons(persons)
-
     return {"message": f"Person #{person_id} has been removed from the system."}
 
 
 @app.post("/api/persons/reload", summary="Force reload recognition cache")
 async def reload_persons():
-    """Force-reload the VisionEngine's in-memory embedding cache from the database."""
-    persons = await database.get_all_persons_with_embeddings()
-    engine.load_known_persons(persons)
-    return {"message": f"Loaded {len(persons)} known persons into VisionEngine."}
+    """VisionEngine now uses PostgreSQL pgvector directly. No reload necessary."""
+    return {"message": "VisionEngine uses PostgreSQL directly. No cache reload required."}
 
 
 # ── Notification Settings Endpoints ────────────────────────────────────────────────

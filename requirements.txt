@@ -18,7 +18,10 @@ onnxruntime==1.22.0         # CPU fallback; swap for onnxruntime-silicon on Appl
 ultralytics          # YOLOv8 for hardware-accelerated person detection
 
 # ── Database ───────────────────────────────────────────────────────────────────
-aiosqlite==0.21.0
+supabase==2.11.0
+psycopg2-binary==2.9.10
+pgvector==0.3.2
+sqlalchemy==2.0.36
 
 # ── Telegram Bot ───────────────────────────────────────────────────────────────
 python-telegram-bot==22.8

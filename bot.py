@@ -49,7 +49,7 @@ def get_bot() -> Bot:
 # ── Sending alerts ─────────────────────────────────────────────────────────────
 
 async def send_unknown_face_alert(
-    snapshot_path: Path,
+    snapshot_path: str,
     event_id: int,
     timestamp: Optional[datetime] = None,
 ) -> Optional[int]:
@@ -97,14 +97,23 @@ async def send_unknown_face_alert(
 
     try:
         bot = get_bot()
-        with open(snapshot_path, "rb") as photo_file:
+        if snapshot_path.startswith("http"):
             msg = await bot.send_photo(
                 chat_id=TELEGRAM_ADMIN_ID,
-                photo=photo_file,
+                photo=snapshot_path,
                 caption=caption,
                 parse_mode="HTML",
                 reply_markup=keyboard,
             )
+        else:
+            with open(snapshot_path, "rb") as photo_file:
+                msg = await bot.send_photo(
+                    chat_id=TELEGRAM_ADMIN_ID,
+                    photo=photo_file,
+                    caption=caption,
+                    parse_mode="HTML",
+                    reply_markup=keyboard,
+                )
         logger.info(
             "Alert sent to Telegram | event_id={} msg_id={}", event_id, msg.message_id
         )
