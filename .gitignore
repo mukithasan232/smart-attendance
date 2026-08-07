@@ -9,7 +9,6 @@ env/
 .venv/
 
 # Environment
-.env
 !.env.example
 
 # Data
@@ -19,7 +18,6 @@ models/
 logs/
 
 # IDE
-.vscode/
 .idea/
 *.swp
 
@@ -36,4 +34,4 @@ build/
 # Node
 node_modules/
 .vercel
-.env*
+config.bat
