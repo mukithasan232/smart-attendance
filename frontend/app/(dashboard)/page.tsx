@@ -294,21 +294,21 @@ export default function DashboardPage() {
       {/* ── Summary Cards Grid ── */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-6">
         <HRMCard 
-          title="PRESENT NOW" 
-          value={loading ? "..." : 0} 
-          icon={<Users size={20} />} 
+          title="ACTIVE CAMERAS" 
+          value={loading ? "..." : (status?.camera_running ? 1 : 0)} 
+          icon={<Video size={20} />} 
           iconColor="blue" 
         />
         <HRMCard 
-          title="TOTAL ABSENT" 
-          value={loading ? "..." : 16} 
+          title="UNKNOWN ALERTS" 
+          value={loading ? "..." : unknownToday} 
           icon={<AlertTriangle size={20} />} 
           iconColor="red" 
         />
         <HRMCard 
-          title="PENDING LEAVES" 
-          value={loading ? "..." : 1} 
-          icon={<Clock size={20} />} 
+          title="TOTAL VISITORS" 
+          value={loading ? "..." : totalToday} 
+          icon={<Users size={20} />} 
           iconColor="amber" 
         />
       </div>
