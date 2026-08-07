@@ -289,8 +289,8 @@ async def _handle_unknown_face(result: RecognitionResult, frame: np.ndarray) -> 
 
     # 3. Blur detection check
     face_crop = frame[max(0, y1):max(0, y2), max(0, x1):max(0, x2)]
-    if not is_image_clear(face_crop, threshold=50.0):
-        logger.debug("Face rejected due to blur (Laplacian variance < 100)")
+    if not is_image_clear(face_crop, threshold=15.0):
+        logger.debug("Face rejected due to blur (Laplacian variance < 15)")
         return
 
     # Cooldown check — one zone key for now; extend to spatial zones later
@@ -305,8 +305,6 @@ async def _handle_unknown_face(result: RecognitionResult, frame: np.ndarray) -> 
 
     # Save the snapshot
     snapshot_path = _save_snapshot(frame, "unknown")
-    if snapshot_path is None:
-        return
 
     if AUTO_ENROLL_UNKNOWN_FACES:
         ts_str = datetime.now().strftime("%Y%m%d_%H%M%S")
@@ -381,7 +379,7 @@ async def _handle_unknown_face(result: RecognitionResult, frame: np.ndarray) -> 
         ))
 
 
-def _save_snapshot(frame: np.ndarray, prefix: str) -> Optional[str]:
+def _save_snapshot(frame: np.ndarray, prefix: str) -> str:
     """Save a frame as JPEG to Supabase Storage (or fallback to local). Returns the public URL or path."""
     try:
         ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
@@ -390,25 +388,29 @@ def _save_snapshot(frame: np.ndarray, prefix: str) -> Optional[str]:
         success, encoded = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
         if not success:
             logger.error("Failed to encode frame to JPEG")
-            return None
+            return "fallback_no_image"
             
         byte_data = encoded.tobytes()
         
         if supabase:
-            supabase.storage.from_('snapshots').upload(
-                path=filename,
-                file=byte_data,
-                file_options={"content-type": "image/jpeg"}
-            )
-            return supabase.storage.from_('snapshots').get_public_url(filename)
-        else:
-            path = SNAPSHOTS_DIR / filename
-            with open(path, "wb") as f:
-                f.write(byte_data)
-            return str(path)
+            try:
+                supabase.storage.from_('snapshots').upload(
+                    path=filename,
+                    file=byte_data,
+                    file_options={"content-type": "image/jpeg"}
+                )
+                return supabase.storage.from_('snapshots').get_public_url(filename)
+            except Exception as e:
+                logger.warning(f"Supabase upload failed: {e}. Falling back to local disk.")
+                
+        # Fallback to local save
+        path = SNAPSHOTS_DIR / filename
+        with open(path, "wb") as f:
+            f.write(byte_data)
+        return str(path)
     except Exception as exc:
-        logger.error("Snapshot save failed: {}", exc)
-        return None
+        logger.error("Snapshot save failed completely: {}", exc)
+        return "fallback_no_image"
 
 
 # ── MJPEG Stream ───────────────────────────────────────────────────────────────

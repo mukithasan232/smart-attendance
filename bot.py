@@ -27,7 +27,7 @@ from loguru import logger
 from telegram import Bot, InlineKeyboardButton, InlineKeyboardMarkup, Update
 from telegram.error import TelegramError
 
-from config import TELEGRAM_ADMIN_ID, TELEGRAM_BOT_TOKEN
+from config import TELEGRAM_ADMIN_ID, TELEGRAM_BOT_TOKEN, CAMERA_ID
 
 # ── State machine ──────────────────────────────────────────────────────────────
 # Tracks admin chats that are currently in the "waiting for name" state.
@@ -97,7 +97,14 @@ async def send_unknown_face_alert(
 
     try:
         bot = get_bot()
-        if snapshot_path.startswith("http"):
+        if snapshot_path == "fallback_no_image":
+            text = f"🚨 <b>Unknown face detected at {CAMERA_ID}</b>, but snapshot capture failed.\n\nEvent ID: #{event_id}"
+            msg = await bot.send_message(
+                chat_id=TELEGRAM_ADMIN_ID,
+                text=text,
+                parse_mode="HTML"
+            )
+        elif snapshot_path.startswith("http"):
             msg = await bot.send_photo(
                 chat_id=TELEGRAM_ADMIN_ID,
                 photo=snapshot_path,

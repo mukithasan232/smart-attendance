@@ -47,7 +47,7 @@ UNKNOWN_COOLDOWN_SEC: int = int(os.getenv("UNKNOWN_COOLDOWN_SEC", "120"))  # 2 m
 AUTO_ENROLL_UNKNOWN_FACES: bool = os.getenv("AUTO_ENROLL_UNKNOWN_FACES", "False").lower() == "true"
 
 # Use YOLOv8 person detection as a pre-filter before running heavy face recognition
-USE_YOLO_PREFILTER: bool = os.getenv("USE_YOLO_PREFILTER", "True").lower() == "true"
+USE_YOLO_PREFILTER: bool = os.getenv("USE_YOLO_PREFILTER", "False").lower() == "true"
 
 # ── Telegram ────────────────────────────────────────────────────────────────────
 TELEGRAM_BOT_TOKEN: str = os.getenv("TELEGRAM_BOT_TOKEN", "")
@@ -92,9 +92,9 @@ TENANT_ID: str = os.getenv("TENANT_ID", "default")
 DB_PATH: Path = Path(os.getenv("DB_PATH", "./security.db"))
 
 # ── Supabase (PostgreSQL + Storage) ───────────────────────────────────────────
-DATABASE_URL: str = os.getenv("DATABASE_URL", "")
+DATABASE_URL: str = os.getenv("DATABASE_URL", "").replace("?pgbouncer=true", "").replace("&pgbouncer=true", "")
 SUPABASE_URL: str = os.getenv("SUPABASE_URL", "")
-SUPABASE_KEY: str = os.getenv("SUPABASE_KEY", "")
+SUPABASE_KEY: str = os.getenv("SUPABASE_SERVICE_ROLE_KEY", os.getenv("SUPABASE_KEY", ""))
 SNAPSHOTS_DIR: Path = Path(os.getenv("SNAPSHOTS_DIR", "./snapshots"))
 MODEL_DIR: Path = Path(os.getenv("MODEL_DIR", "./models"))
 
