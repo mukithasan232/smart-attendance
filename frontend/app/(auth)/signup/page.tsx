@@ -129,7 +129,7 @@ export default function SignupPage() {
         </p>
         
         <p className="text-center text-xs mt-4" style={{ textAlign: 'center', fontSize: '12px', color: 'var(--text-muted)', marginTop: '16px' }}>
-          By clicking "Create Account", you agree to our <a href="#" style={{ color: 'inherit', textDecoration: 'underline' }}>Terms of Service</a> and <a href="#" style={{ color: 'inherit', textDecoration: 'underline' }}>Privacy Policy</a>.
+          By clicking &quot;Create Account&quot;, you agree to our <a href="#" style={{ color: 'inherit', textDecoration: 'underline' }}>Terms of Service</a> and <a href="#" style={{ color: 'inherit', textDecoration: 'underline' }}>Privacy Policy</a>.
         </p>
       </div>
 

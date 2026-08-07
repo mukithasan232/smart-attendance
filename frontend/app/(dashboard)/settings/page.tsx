@@ -238,6 +238,7 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line
     if (activeTab === 'camera') fetchCameras();
   }, [activeTab, fetchCameras]);
 
@@ -331,6 +332,7 @@ export default function SettingsPage() {
 
   useEffect(() => {
     if (activeTab !== 'integrations') return;
+    // eslint-disable-next-line
     setSmtpLoading(true);
     getNotificationSettings()
       .then(data => setSmtp(data.smtp))

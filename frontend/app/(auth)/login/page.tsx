@@ -104,7 +104,7 @@ export default function LoginPage() {
           </form>
 
           <p style={{ marginTop: '32px', textAlign: 'center', fontSize: '14px', color: 'var(--text-secondary)' }}>
-            Don't have an account?{' '}
+            Don&apos;t have an account?{' '}
             <Link href="/signup" style={{ color: 'var(--accent-indigo)', fontWeight: 600, textDecoration: 'none' }}>
               Request Access
             </Link>
@@ -124,7 +124,7 @@ export default function LoginPage() {
         <div className="auth-banner-overlay"></div>
         <div className="auth-banner-content">
           <h2 style={{ fontSize: '24px', fontWeight: 700, marginBottom: '16px' }}>
-            "SecureVision reduced our unauthorized access incidents by 94% in the first quarter."
+            &quot;SecureVision reduced our unauthorized access incidents by 94% in the first quarter.&quot;
           </h2>
           <p style={{ opacity: 0.8, fontSize: '15px' }}>
             — Alex Mercer, Head of Physical Security at TechCorp
