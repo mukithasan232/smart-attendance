@@ -186,7 +186,8 @@ function KnownUnknownDonut({ known, unknown }: { known: number; unknown: number 
             </Pie>
             <Tooltip
               contentStyle={{ background: "#0f172a", border: "1px solid #334155", borderRadius: 12, fontSize: 12, color: "#fff" }}
-              formatter={(v: number, n: string) => [`${v} events`, n]}
+              formatter={(v: unknown, n: unknown) => [`${v} events`, String(n)]}
+
             />
           </PieChart>
         </ResponsiveContainer>
