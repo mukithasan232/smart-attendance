@@ -107,7 +107,7 @@ function CameraModal({
             <label className="form-label">Camera Name *</label>
             <input
               type="text"
-              className="form-input"
+              className="w-full md:w-auto md:min-w-[300px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="e.g. Main Entrance, Parking Lot"
               value={form.name}
               onChange={e => setForm({ ...form, name: e.target.value })}
@@ -119,7 +119,7 @@ function CameraModal({
             <label className="form-label">Stream URL / Device Index *</label>
             <input
               type="text"
-              className={`form-input ${urlError ? 'border-red-400 focus:border-red-400' : ''}`}
+              className={`w-full md:w-auto md:min-w-[300px] px-4 py-2.5 rounded-xl border text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 ${urlError ? 'border-red-400 focus:border-red-400' : 'border-slate-200'}`}
               placeholder="rtsp://admin:pass@192.168.1.100/stream  or  0"
               value={form.url}
               onChange={e => { setForm({ ...form, url: e.target.value }); if (urlError) validateUrl(e.target.value); }}
@@ -141,7 +141,7 @@ function CameraModal({
             <label className="form-label">Location / Label</label>
             <input
               type="text"
-              className="form-input"
+              className="w-full md:w-auto md:min-w-[300px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
               placeholder="e.g. Lobby, Back Door, Rooftop"
               value={form.location}
               onChange={e => setForm({ ...form, location: e.target.value })}
@@ -387,7 +387,7 @@ export default function SettingsPage() {
   ];
 
   return (
-    <div className="page-root">
+    <div className="w-full relative">
       {/* ── Modals ── */}
       {showCamModal && (
         <CameraModal
@@ -413,10 +413,12 @@ export default function SettingsPage() {
         />
       )}
 
-      <div className="main-content">
-        <div style={{ marginBottom: '32px' }}>
-          <h1 style={{ fontSize: '24px', fontWeight: 700, color: 'var(--text-primary)' }}>Settings</h1>
-          <p style={{ color: 'var(--text-secondary)' }}>Manage your enterprise platform configurations.</p>
+      <div className="p-6 lg:p-8 flex flex-col gap-6 bg-slate-50 min-h-screen">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 lg:gap-6 mb-2 w-full">
+          <div>
+            <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Settings</h1>
+            <p className="text-slate-500 text-sm mt-1">Manage your enterprise platform configurations.</p>
+          </div>
         </div>
 
         <div className="settings-layout">
@@ -438,7 +440,7 @@ export default function SettingsPage() {
 
             {/* ── CAMERA MANAGEMENT ─────────────────────────────────────────── */}
             {activeTab === 'camera' && (
-              <div className="settings-card">
+              <div className="bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100 flex flex-col gap-6 w-full overflow-hidden">
                 <div className="settings-card-header">
                   <h2 className="settings-card-title">Camera Management</h2>
                   <p className="settings-card-subtitle">
@@ -607,7 +609,7 @@ export default function SettingsPage() {
 
             {/* ── TELEGRAM ───────────────────────────────────────────────────── */}
             {activeTab === 'notifications' && (
-              <div className="settings-card">
+              <div className="bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100 flex flex-col gap-6 w-full overflow-hidden">
                 <div className="settings-card-header">
                   <h2 className="settings-card-title">Telegram Notifications</h2>
                   <p className="settings-card-subtitle">Configure real-time alerts sent to your Telegram group or channel.</p>
@@ -615,11 +617,11 @@ export default function SettingsPage() {
                 <div className="settings-card-body">
                   <div className="form-group">
                     <label className="form-label">Telegram Bot Token</label>
-                    <input type="text" className="form-input" value={telegramToken} onChange={e => setTelegramToken(e.target.value)} />
+                    <input type="text" className="w-full md:w-auto md:min-w-[300px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" value={telegramToken} onChange={e => setTelegramToken(e.target.value)} />
                   </div>
                   <div className="form-group">
                     <label className="form-label">Target Chat ID</label>
-                    <input type="text" className="form-input" value={chatId} onChange={e => setChatId(e.target.value)} />
+                    <input type="text" className="w-full md:w-auto md:min-w-[300px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" value={chatId} onChange={e => setChatId(e.target.value)} />
                   </div>
                   <div style={{ marginTop: '16px' }}>
                     <SectionRow title="Alert on Unknown Person" desc="Send a photo when an unregistered face is detected.">
@@ -645,7 +647,7 @@ export default function SettingsPage() {
 
             {/* ── INTEGRATIONS (SMTP) ────────────────────────────────────────── */}
             {activeTab === 'integrations' && (
-              <div className="settings-card">
+              <div className="bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100 flex flex-col gap-6 w-full overflow-hidden">
                 <div className="settings-card-header">
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(135deg,#6366f1,#8b5cf6)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -678,21 +680,21 @@ export default function SettingsPage() {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: '12px', marginBottom: '12px' }}>
                         <div className="form-group" style={{ margin: 0 }}>
                           <label className="form-label">SMTP Host</label>
-                          <input type="text" className="form-input" placeholder="smtp.gmail.com" value={smtp.host} onChange={e => setSmtp(p => ({ ...p, host: e.target.value }))} />
+                          <input type="text" className="w-full md:w-auto md:min-w-[300px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="smtp.gmail.com" value={smtp.host} onChange={e => setSmtp(p => ({ ...p, host: e.target.value }))} />
                         </div>
                         <div className="form-group" style={{ margin: 0, minWidth: '100px' }}>
                           <label className="form-label">Port</label>
-                          <input type="number" className="form-input" placeholder="587" value={smtp.port} onChange={e => setSmtp(p => ({ ...p, port: parseInt(e.target.value) || 587 }))} />
+                          <input type="number" className="w-full md:w-auto md:min-w-[300px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="587" value={smtp.port} onChange={e => setSmtp(p => ({ ...p, port: parseInt(e.target.value) || 587 }))} />
                         </div>
                       </div>
                       <div className="form-group">
                         <label className="form-label">Username</label>
-                        <input type="email" className="form-input" placeholder="you@gmail.com" value={smtp.user} onChange={e => setSmtp(p => ({ ...p, user: e.target.value }))} />
+                        <input type="email" className="w-full md:w-auto md:min-w-[300px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="you@gmail.com" value={smtp.user} onChange={e => setSmtp(p => ({ ...p, user: e.target.value }))} />
                       </div>
                       <div className="form-group">
                         <label className="form-label">Password / App Password</label>
                         <div style={{ position: 'relative' }}>
-                          <input type={showPassword ? 'text' : 'password'} className="form-input" placeholder="Gmail App Password (16 chars)" value={smtp.password} onChange={e => setSmtp(p => ({ ...p, password: e.target.value }))} style={{ paddingRight: '40px' }} />
+                          <input type={showPassword ? 'text' : 'password'} className="w-full md:w-auto md:min-w-[300px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Gmail App Password (16 chars)" value={smtp.password} onChange={e => setSmtp(p => ({ ...p, password: e.target.value }))} style={{ paddingRight: '40px' }} />
                           <button type="button" onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0, display: 'flex' }}>
                             {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                           </button>
@@ -702,11 +704,11 @@ export default function SettingsPage() {
                       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                         <div className="form-group" style={{ margin: 0 }}>
                           <label className="form-label">From Address</label>
-                          <input type="email" className="form-input" placeholder="Same as username" value={smtp.from_addr} onChange={e => setSmtp(p => ({ ...p, from_addr: e.target.value }))} />
+                          <input type="email" className="w-full md:w-auto md:min-w-[300px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Same as username" value={smtp.from_addr} onChange={e => setSmtp(p => ({ ...p, from_addr: e.target.value }))} />
                         </div>
                         <div className="form-group" style={{ margin: 0 }}>
                           <label className="form-label">Recipient Email(s)</label>
-                          <input type="text" className="form-input" placeholder="admin@company.com, soc@company.com" value={smtp.to_emails} onChange={e => setSmtp(p => ({ ...p, to_emails: e.target.value }))} />
+                          <input type="text" className="w-full md:w-auto md:min-w-[300px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="admin@company.com, soc@company.com" value={smtp.to_emails} onChange={e => setSmtp(p => ({ ...p, to_emails: e.target.value }))} />
                         </div>
                       </div>
                       <div style={{ marginTop: '16px' }}>
@@ -740,7 +742,7 @@ export default function SettingsPage() {
 
             {/* ── AI ENGINE ──────────────────────────────────────────────────── */}
             {activeTab === 'ai' && (
-              <div className="settings-card">
+              <div className="bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100 flex flex-col gap-6 w-full overflow-hidden">
                 <div className="settings-card-header">
                   <h2 className="settings-card-title">AI Engine Configuration</h2>
                   <p className="settings-card-subtitle">Fine-tune the facial recognition algorithms and confidence thresholds.</p>
@@ -756,7 +758,7 @@ export default function SettingsPage() {
                   </div>
                   <div className="form-group" style={{ marginTop: '24px' }}>
                     <label className="form-label">Alert Cooldown (Seconds)</label>
-                    <input type="number" className="form-input" value={cooldown} onChange={e => setCooldown(parseInt(e.target.value))} style={{ maxWidth: '200px' }} />
+                    <input type="number" className="w-full md:w-auto md:min-w-[300px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" value={cooldown} onChange={e => setCooldown(parseInt(e.target.value))} style={{ maxWidth: '200px' }} />
                     <p className="setting-desc" style={{ marginTop: '4px' }}>Time before re-alerting for the same person.</p>
                   </div>
                 </div>
@@ -771,7 +773,7 @@ export default function SettingsPage() {
 
             {/* ── DATABASE ───────────────────────────────────────────────────── */}
             {activeTab === 'database' && (
-              <div className="settings-card">
+              <div className="bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100 flex flex-col gap-6 w-full overflow-hidden">
                 <div className="settings-card-header">
                   <h2 className="settings-card-title">Database & System</h2>
                   <p className="settings-card-subtitle">Manage data retention policies and perform manual backups.</p>
@@ -779,7 +781,7 @@ export default function SettingsPage() {
                 <div className="settings-card-body">
                   <div className="form-group">
                     <label className="form-label">Visitor Log Retention Policy</label>
-                    <select className="form-input" value={retention} onChange={e => setRetention(e.target.value)} style={{ maxWidth: '400px', cursor: 'pointer' }}>
+                    <select className="w-full md:w-auto md:min-w-[300px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" value={retention} onChange={e => setRetention(e.target.value)} style={{ maxWidth: '400px', cursor: 'pointer' }}>
                       <option value="7">Auto-delete after 7 days</option>
                       <option value="30">Auto-delete after 30 days</option>
                       <option value="90">Auto-delete after 90 days</option>

@@ -95,7 +95,7 @@ function HRMCard({
   };
 
   return (
-    <div className="bg-white rounded-[20px] p-6 shadow-sm border border-gray-100 flex items-center justify-between">
+    <div className="bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100 flex items-center justify-between">
       <div className="flex flex-col">
         <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{title}</p>
         <p className="text-4xl font-extrabold text-gray-800 mt-2">{value}</p>
@@ -131,7 +131,7 @@ function FeedItem({ ev, animate }: { ev: DetectionEvent; animate: boolean }) {
       </div>
       {/* Badge + time */}
       <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
-        <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-bold ${
+        <span className={`px-2.5 py-1 inline-flex items-center gap-1.5 rounded-md font-bold text-xs ${
           isKnown ? "bg-emerald-50 text-emerald-700 border border-emerald-100" 
                   : "bg-rose-50 text-rose-700 border border-rose-100"
         }`}>
@@ -266,17 +266,17 @@ export default function DashboardPage() {
   const recentFive   = events.slice(0, 5);
 
   return (
-    <div className="p-6 space-y-6 bg-slate-50 min-h-screen">
+    <div className="p-6 lg:p-8 flex flex-col gap-6 bg-slate-50 min-h-screen">
 
       {/* ── Page Header ── */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-4 gap-4">
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 lg:gap-6 mb-6 md:mb-8 w-full">
         <div>
-          <h1 className="text-3xl font-extrabold text-slate-900 tracking-tight">Admin Dashboard</h1>
+          <h1 className="text-2xl md:text-3xl font-extrabold text-slate-900 tracking-tight">Admin Dashboard</h1>
           <p className="text-sm text-slate-500 font-medium mt-1">
             {new Date(now).toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <button className="px-4 py-2.5 border border-slate-300 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-100 transition-colors bg-white">
             Customize Dashboard
           </button>
@@ -317,7 +317,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
         {/* Area Chart — Visitor Traffic (2/3 width) */}
-        <div className="xl:col-span-2 bg-white border border-slate-100 rounded-2xl shadow-sm p-6 lg:p-8 flex flex-col justify-between">
+        <div className="xl:col-span-2 bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100 flex flex-col justify-between">
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-lg font-extrabold text-slate-900">Visitor Traffic</h2>
@@ -375,7 +375,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Donut + quick stats (1/3 width) */}
-        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-6 lg:p-8 flex flex-col justify-between">
+        <div className="bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100 flex flex-col justify-between">
           <div className="mb-6">
             <h2 className="text-lg font-extrabold text-slate-900">Classification</h2>
             <p className="text-sm font-medium text-slate-500 mt-1">Today&apos;s distribution</p>
@@ -401,7 +401,7 @@ export default function DashboardPage() {
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
 
         {/* Recent Live Activity Feed (2/3) */}
-        <div className="xl:col-span-2 bg-white border border-slate-100 rounded-2xl shadow-sm p-6 lg:p-8">
+        <div className="xl:col-span-2 bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100">
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-lg font-extrabold text-slate-900">Recent Activity</h2>
@@ -442,7 +442,7 @@ export default function DashboardPage() {
         </div>
 
         {/* Camera & System Health status (1/3) */}
-        <div className="bg-white border border-slate-100 rounded-2xl shadow-sm p-6 lg:p-8 flex flex-col h-full">
+        <div className="bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100 flex flex-col h-full">
           <div className="mb-8">
             <h2 className="text-lg font-extrabold text-slate-900">System Health</h2>
             <p className="text-sm font-medium text-slate-500 mt-1">Device & service status</p>
@@ -466,8 +466,8 @@ export default function DashboardPage() {
                       <p className="text-[11px] font-semibold tracking-wider text-slate-400 font-mono mt-0.5 truncate uppercase">{cam.id}</p>
                     </div>
                   </div>
-                  <span className={`flex-shrink-0 text-xs font-bold px-2.5 py-1.5 rounded-lg border ${
-                    cam.active ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-slate-50 text-slate-400 border-slate-200"
+                  <span className={`flex-shrink-0 px-2.5 py-1 inline-flex items-center gap-1.5 rounded-md font-bold text-xs ${
+                    cam.active ? "bg-emerald-50 text-emerald-700 border border-emerald-100" : "bg-slate-50 text-slate-400 border border-slate-200"
                   }`}>
                     {cam.active ? "Live" : "Offline"}
                   </span>
