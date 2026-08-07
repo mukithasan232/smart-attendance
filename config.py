@@ -21,6 +21,20 @@ FRAME_SKIP: int = int(os.getenv("FRAME_SKIP", "4"))
 RTSP_RESIZE_WIDTH: int = int(os.getenv("RTSP_RESIZE_WIDTH", "640"))
 RTSP_MAX_FPS: int = int(os.getenv("RTSP_MAX_FPS", "15"))
 
+# Camera list stored as JSON — managed via the Settings UI.
+# Falls back to a single default entry built from RTSP_URL if not set.
+import json as _json
+
+def _default_cameras() -> list:
+    return [{"id": "1", "name": "Primary Camera", "url": RTSP_URL, "location": "Default", "enabled": True}]
+
+try:
+    _raw_cameras = os.getenv("CAMERAS_CONFIG", "")
+    CAMERAS_CONFIG: list = _json.loads(_raw_cameras) if _raw_cameras else _default_cameras()
+except Exception:
+    CAMERAS_CONFIG = _default_cameras()
+
+
 # ── Face Recognition ────────────────────────────────────────────────────────────
 FACE_MATCH_THRESHOLD: float = float(os.getenv("FACE_MATCH_THRESHOLD", "0.5"))
 FACE_DETECT_THRESHOLD: float = float(os.getenv("FACE_DETECT_THRESHOLD", "0.5"))

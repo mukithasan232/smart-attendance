@@ -125,3 +125,35 @@ export const saveNotificationSettings = (settings: SmtpSettings): Promise<{ mess
 
 export const testEmailConnection = (): Promise<{ success: boolean; message: string }> =>
   apiFetch("/api/settings/notifications/test", { method: "POST" });
+
+// ── Camera Settings ────────────────────────────────────────────────────────────
+
+export interface CameraConfig {
+  id: string;
+  name: string;
+  url: string;
+  location: string;
+  enabled: boolean;
+}
+
+export const getCameras = (): Promise<{ cameras: CameraConfig[] }> =>
+  apiFetch<{ cameras: CameraConfig[] }>("/api/settings/cameras");
+
+export const addCamera = (cam: Omit<CameraConfig, "id">): Promise<{ message: string; camera: CameraConfig }> =>
+  apiFetch("/api/settings/cameras", {
+    method: "POST",
+    body: JSON.stringify(cam),
+  });
+
+export const updateCamera = (id: string, cam: Omit<CameraConfig, "id">): Promise<{ message: string; camera: CameraConfig }> =>
+  apiFetch(`/api/settings/cameras/${id}`, {
+    method: "PUT",
+    body: JSON.stringify(cam),
+  });
+
+export const deleteCamera = (id: string): Promise<{ message: string }> =>
+  apiFetch(`/api/settings/cameras/${id}`, { method: "DELETE" });
+
+export const applyCamera = (id: string): Promise<{ message: string; url: string }> =>
+  apiFetch(`/api/settings/cameras/${id}/apply`, { method: "POST" });
+

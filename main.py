@@ -798,8 +798,146 @@ async def test_notification():
 
 
 
+# ── Camera Management Endpoints ───────────────────────────────────────────────────
+
+class CameraConfig(BaseModel):
+    id: Optional[str] = None
+    name: str
+    url: str
+    location: str = ""
+    enabled: bool = True
+
+
+def _load_cameras() -> list:
+    """Load the camera list from config (re-imports to get latest .env values)."""
+    import importlib, config as cfg
+    importlib.reload(cfg)
+    return list(cfg.CAMERAS_CONFIG)
+
+
+def _save_cameras(cams: list) -> None:
+    """Persist camera list to .env as JSON and reload config."""
+    import importlib, json, config as cfg
+    env_path = Path(".env")
+    lines = env_path.read_text().splitlines(keepends=True)
+    json_val = json.dumps(cams, ensure_ascii=False)
+    new_lines, found = [], False
+    for line in lines:
+        if line.startswith("CAMERAS_CONFIG="):
+            new_lines.append(f"CAMERAS_CONFIG={json_val}\n")
+            found = True
+        else:
+            new_lines.append(line)
+    if not found:
+        new_lines.append(f"CAMERAS_CONFIG={json_val}\n")
+    env_path.write_text("".join(new_lines))
+    importlib.reload(cfg)
+
+
+@app.get("/api/settings/cameras", summary="List configured cameras")
+async def list_cameras():
+    """Return all camera configurations from the .env store."""
+    return {"cameras": _load_cameras()}
+
+
+@app.post("/api/settings/cameras", status_code=201, summary="Add a new camera")
+async def add_camera(cam: CameraConfig):
+    """Add a new camera entry and persist to .env."""
+    import uuid
+    cams = _load_cameras()
+    new_cam = cam.model_dump()
+    new_cam["id"] = str(uuid.uuid4())[:8]
+    cams.append(new_cam)
+    _save_cameras(cams)
+    return {"message": "Camera added.", "camera": new_cam}
+
+
+@app.put("/api/settings/cameras/{cam_id}", summary="Update a camera")
+async def update_camera(cam_id: str, cam: CameraConfig):
+    """Update an existing camera by ID and persist to .env."""
+    cams = _load_cameras()
+    updated = False
+    for i, c in enumerate(cams):
+        if c["id"] == cam_id:
+            cams[i] = {**cam.model_dump(), "id": cam_id}
+            updated = True
+            break
+    if not updated:
+        raise HTTPException(status_code=404, detail=f"Camera '{cam_id}' not found.")
+    _save_cameras(cams)
+    return {"message": "Camera updated.", "camera": cams[next(i for i, c in enumerate(cams) if c["id"] == cam_id)]}
+
+
+@app.delete("/api/settings/cameras/{cam_id}", summary="Delete a camera")
+async def delete_camera(cam_id: str):
+    """Remove a camera by ID from the .env store."""
+    cams = _load_cameras()
+    original_len = len(cams)
+    cams = [c for c in cams if c["id"] != cam_id]
+    if len(cams) == original_len:
+        raise HTTPException(status_code=404, detail=f"Camera '{cam_id}' not found.")
+    _save_cameras(cams)
+    return {"message": f"Camera '{cam_id}' deleted."}
+
+
+@app.post("/api/settings/cameras/{cam_id}/apply", summary="Apply camera — hot-reload the live feed")
+async def apply_camera(cam_id: str):
+    """
+    Restart the running RTSPCamera with the URL from the selected camera config.
+    This allows switching cameras without restarting the server.
+    """
+    global camera, _processing_task
+    cams = _load_cameras()
+    target = next((c for c in cams if c["id"] == cam_id), None)
+    if not target:
+        raise HTTPException(status_code=404, detail=f"Camera '{cam_id}' not found.")
+    if not target.get("enabled", True):
+        raise HTTPException(status_code=400, detail="Cannot apply a disabled camera.")
+
+    new_url = target["url"]
+
+    # Stop existing processing loop and camera
+    if _processing_task:
+        _processing_task.cancel()
+        try:
+            await _processing_task
+        except asyncio.CancelledError:
+            pass
+
+    if camera is not None:
+        camera.stop()
+
+    # Start new camera with the selected URL
+    try:
+        camera = RTSPCamera(url=new_url)
+        camera.start()
+    except RuntimeError as exc:
+        raise HTTPException(status_code=400, detail=f"Could not open camera stream: {exc}")
+
+    # Restart processing loop
+    _processing_task = asyncio.create_task(processing_loop())
+
+    # Also update RTSP_URL in .env so it persists across restarts
+    env_path = Path(".env")
+    lines = env_path.read_text().splitlines(keepends=True)
+    new_lines, found = [], False
+    for line in lines:
+        if line.startswith("RTSP_URL="):
+            new_lines.append(f"RTSP_URL={new_url}\n")
+            found = True
+        else:
+            new_lines.append(line)
+    if not found:
+        new_lines.append(f"RTSP_URL={new_url}\n")
+    env_path.write_text("".join(new_lines))
+
+    logger.info("Camera hot-reloaded | id={} url={}", cam_id, new_url)
+    return {"message": f"Live feed switched to '{target['name']}'.", "url": new_url}
+
+
 @app.get("/", include_in_schema=False)
 async def root():
+
     return {
         "name": "Smart Face Recognition Security System",
         "version": "2.0.0",
