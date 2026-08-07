@@ -38,10 +38,10 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-end justify-center pb-20 relative bg-[url('/auth-banner.png')] bg-cover bg-center bg-no-repeat">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 relative bg-[url('/auth-banner.png')] bg-cover bg-center">
       <div className="absolute inset-0 bg-slate-950/40 z-0"></div>
 
-      <div className="relative z-10 w-full max-w-[400px] p-8 rounded-2xl bg-slate-900/40 backdrop-blur-lg border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)]">
+      <div className="w-full max-w-[420px] p-8 sm:p-10 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] relative z-10">
         
         <h1 className="text-2xl font-semibold text-white text-center mb-1">Welcome back.</h1>
         <p className="text-xs text-slate-300 text-center mb-8">Securing Your Digital Enterprise.</p>
@@ -51,7 +51,7 @@ export default function LoginPage() {
           <input
             id="email"
             type="email"
-            className="w-full px-4 py-3 bg-slate-950/50 border border-emerald-500/30 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/50 transition-all text-sm"
+            className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all"
             placeholder="Email Address"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
@@ -61,7 +61,7 @@ export default function LoginPage() {
             <input
               id="password"
               type="password"
-              className="w-full px-4 py-3 bg-slate-950/50 border border-emerald-500/30 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-400/50 transition-all text-sm"
+              className="w-full px-4 py-3 bg-black/20 border border-white/10 rounded-xl text-white placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500/50 transition-all"
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
@@ -73,7 +73,7 @@ export default function LoginPage() {
 
           <button
             type="submit"
-            className="w-full py-3 mt-4 bg-indigo-900/60 border border-indigo-500/50 hover:bg-indigo-800/80 hover:border-indigo-400 text-white text-sm font-semibold rounded-xl transition-all shadow-[0_0_15px_rgba(79,70,229,0.3)] disabled:opacity-50 flex items-center justify-center gap-2"
+            className="w-full py-3.5 mt-2 bg-indigo-600 hover:bg-indigo-500 text-white font-bold rounded-xl transition-all shadow-[0_0_20px_rgba(79,70,229,0.4)] flex items-center justify-center gap-2 disabled:opacity-50"
             disabled={isLoading}
           >
             {isLoading ? <Loader2 size={18} className="animate-spin" /> : 'Log In'}
