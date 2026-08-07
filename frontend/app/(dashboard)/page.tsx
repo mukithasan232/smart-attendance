@@ -95,12 +95,12 @@ function HRMCard({
   };
 
   return (
-    <div className="bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100 flex items-center justify-between">
-      <div className="flex flex-col">
-        <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{title}</p>
-        <p className="text-4xl font-extrabold text-gray-800 mt-2">{value}</p>
+    <div className="bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100 flex flex-row items-center justify-between gap-4">
+      <div className="flex flex-col justify-center">
+        <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">{title}</h3>
+        <p className="text-3xl font-extrabold text-slate-900">{value}</p>
       </div>
-      <div className={`w-12 h-12 rounded-full flex items-center justify-center ${colors[iconColor]}`}>
+      <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${colors[iconColor]}`}>
         {icon}
       </div>
     </div>

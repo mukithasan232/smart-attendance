@@ -106,7 +106,7 @@ function SkeletonRow() {
   return (
     <tr className="border-b border-slate-100">
       {[56, 160, 90, 130, 120].map((w, i) => (
-        <td key={i} className="px-5 py-4">
+        <td key={i} className="px-6 py-4 align-middle">
           <div className="h-4 rounded-md bg-slate-200 animate-pulse" style={{ width: w }} />
         </td>
       ))}
@@ -277,16 +277,18 @@ export default function LogsPage() {
             { label: "Known Visitors",  value: knownCount,    color: "text-emerald-600", bg: "bg-emerald-50", icon: <ShieldCheck   size={20} className="text-emerald-500" /> },
             { label: "Unknown / Alerts",value: unknownCount,  color: "text-red-600",     bg: "bg-red-50",     icon: <ShieldAlert   size={20} className="text-red-500" /> },
           ].map(s => (
-            <div key={s.label} className="bg-white rounded-[20px] shadow-sm border border-slate-100 p-6 lg:p-8 flex items-center gap-4">
-              <div className={`${s.bg} w-12 h-12 rounded-full flex items-center justify-center`}>{s.icon}</div>
-              <div>
-                <p className="text-xs font-bold text-gray-400 uppercase tracking-wider">{s.label}</p>
-                <p className={`text-3xl font-extrabold mt-1 ${s.color}`}>
+            <div key={s.label} className="bg-white rounded-[20px] p-6 shadow-sm border border-slate-100 flex flex-row items-center justify-between gap-4">
+              <div className="flex flex-col justify-center">
+                <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">{s.label}</h3>
+                <p className={`text-3xl font-extrabold text-slate-900 ${s.color}`}>
                   {loading
                     ? <span className="inline-block w-12 h-6 bg-slate-200 rounded animate-pulse" />
                     : s.value
                   }
                 </p>
+              </div>
+              <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${s.bg}`}>
+                {s.icon}
               </div>
             </div>
           ))}
@@ -296,58 +298,58 @@ export default function LogsPage() {
         <div className="bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100">
 
           {/* ── Action Bar ── */}
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 lg:gap-6 mb-6 md:mb-8 w-full border-b border-slate-200 pb-4">
-
-            {/* Search input */}
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
+          <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4 mb-6 w-full">
+            <div className="w-full lg:max-w-md relative">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={15} />
               <input
                 type="text"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
                 placeholder="Search by name or ID…"
-                className="w-full md:w-auto md:min-w-[300px] px-4 py-2.5 rounded-xl border border-slate-200 pl-9 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-shadow"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 transition-shadow"
               />
               {search && (
                 <button
                   onClick={() => setSearch("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                  className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
                 >
                   <X size={14} />
                 </button>
               )}
             </div>
 
-            {/* Date range dropdown */}
-            <div className="relative">
-              <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={15} />
-              <select
-                value={dateRange}
-                onChange={e => setDateRange(e.target.value)}
-                className="pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 appearance-none cursor-pointer"
-              >
-                <option value="all">All Time</option>
-                <option value="today">Today</option>
-                <option value="7d">Last 7 Days</option>
-                <option value="30d">Last 30 Days</option>
-              </select>
-            </div>
-
-            {/* Status filter pills */}
-            <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
-              {(["All", "Known", "Unknown"] as const).map(f => (
-                <button
-                  key={f}
-                  onClick={() => setStatusFilter(f)}
-                  className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
-                    statusFilter === f
-                      ? "bg-white shadow-sm text-slate-800"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
+            <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+              {/* Date range dropdown */}
+              <div className="relative">
+                <CalendarDays className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" size={15} />
+                <select
+                  value={dateRange}
+                  onChange={e => setDateRange(e.target.value)}
+                  className="pl-9 pr-8 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400 appearance-none cursor-pointer"
                 >
-                  {f}
-                </button>
-              ))}
+                  <option value="all">All Time</option>
+                  <option value="today">Today</option>
+                  <option value="7d">Last 7 Days</option>
+                  <option value="30d">Last 30 Days</option>
+                </select>
+              </div>
+
+              {/* Status filter pills */}
+              <div className="flex items-center gap-1 bg-slate-100 rounded-lg p-1">
+                {(["All", "Known", "Unknown"] as const).map(f => (
+                  <button
+                    key={f}
+                    onClick={() => setStatusFilter(f)}
+                    className={`px-3 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                      statusFilter === f
+                        ? "bg-white shadow-sm text-slate-800"
+                        : "text-slate-500 hover:text-slate-700"
+                    }`}
+                  >
+                    {f}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -399,7 +401,7 @@ export default function LogsPage() {
                     >
 
                       {/* ── Profile (snapshot thumbnail) ── */}
-                      <td className="px-6 py-4.5 border-b border-slate-50">
+                      <td className="px-6 py-4 align-middle border-b border-slate-50">
                         {imgUrl ? (
                           <button
                             onClick={() => setSelectedSnapshot(imgUrl)}
@@ -423,7 +425,7 @@ export default function LogsPage() {
                       </td>
 
                       {/* ── Name / Visitor ID ── */}
-                      <td className="px-6 py-4.5 border-b border-slate-50">
+                      <td className="px-6 py-4 align-middle border-b border-slate-50">
                         <div className="flex items-center gap-2.5">
                           {imgUrl && <AvatarInitial name={ev.person_name} isKnown={isKnown} />}
                           <div>
@@ -438,7 +440,7 @@ export default function LogsPage() {
                       </td>
 
                       {/* ── Classification badge ── */}
-                      <td className="px-6 py-4.5 border-b border-slate-50">
+                      <td className="px-6 py-4 align-middle border-b border-slate-50">
                         <span className={`px-2.5 py-1 inline-flex items-center gap-1.5 rounded-md font-bold text-xs ${
                           isKnown
                             ? "bg-emerald-100 text-emerald-700"
@@ -455,19 +457,19 @@ export default function LogsPage() {
                       </td>
 
                       {/* ── Camera Source ── */}
-                      <td className="px-6 py-4.5 border-b border-slate-50">
+                      <td className="px-6 py-4 align-middle border-b border-slate-50">
                         <span className="inline-flex items-center gap-1.5 text-xs text-slate-600 font-mono bg-slate-100 px-2 py-1 rounded-md">
                           {ev.camera_id}
                         </span>
                       </td>
 
                       {/* ── Timestamp ── */}
-                      <td className="px-6 py-4.5 border-b border-slate-50 text-slate-500 text-xs tabular-nums">
+                      <td className="px-6 py-4 align-middle border-b border-slate-50 text-slate-500 text-xs tabular-nums">
                         {formatTime(ev.timestamp)}
                       </td>
 
                       {/* ── Action ── */}
-                      <td className="px-6 py-4.5 border-b border-slate-50">
+                      <td className="px-6 py-4 align-middle border-b border-slate-50">
                         {!isKnown && ev.buffer_status !== "added" && (
                           <button
                             onClick={() => handleMakeKnown(ev.id)}
