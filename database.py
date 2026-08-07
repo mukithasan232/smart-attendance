@@ -89,7 +89,7 @@ def _add_person(name: str, embedding: np.ndarray, snapshot_path: Optional[str] =
         db.add(person)
         db.commit()
         db.refresh(person)
-        return person.id
+        return int(person.id) # type: ignore
 
 def _get_all_persons() -> list[dict]:
     with SessionLocal() as db:
@@ -111,7 +111,7 @@ def _delete_person(person_id: int) -> bool:
         person = db.query(Person).filter(Person.id == person_id, Person.is_active == 1).first()
         if not person:
             return False
-        person.is_active = 0
+        person.is_active = 0 # type: ignore
         db.commit()
         logger.info("Person soft-deleted | id={}", person_id)
         return True
@@ -147,7 +147,7 @@ def _log_event(snapshot_path: str, status: str, person_id: Optional[int] = None)
         db.commit()
         db.refresh(event)
         logger.debug("Event logged | id={} status={} person_id={}", event.id, status, person_id)
-        return event.id
+        return int(event.id) # type: ignore
 
 def _get_recent_events(limit: int = 50) -> list[dict]:
     with SessionLocal() as db:
@@ -193,23 +193,23 @@ def _update_event_telegram_msg(event_id: int, telegram_msg_id: int) -> None:
     with SessionLocal() as db:
         event = db.query(Event).filter(Event.id == event_id).first()
         if event:
-            event.telegram_msg_id = telegram_msg_id
+            event.telegram_msg_id = telegram_msg_id # type: ignore
             db.commit()
 
 def _update_event_buffer_status(event_id: int, status: str) -> None:
     with SessionLocal() as db:
         event = db.query(Event).filter(Event.id == event_id).first()
         if event:
-            event.buffer_status = status
+            event.buffer_status = status # type: ignore
             db.commit()
 
 def _update_event_status_and_person(event_id: int, status: str, person_id: int) -> None:
     with SessionLocal() as db:
         event = db.query(Event).filter(Event.id == event_id).first()
         if event:
-            event.status = status
-            event.person_id = person_id
-            event.buffer_status = 'added'
+            event.status = status # type: ignore
+            event.person_id = person_id # type: ignore
+            event.buffer_status = 'added' # type: ignore
             db.commit()
 
 def _get_event_embedding(event_id: int) -> Optional[np.ndarray]:
@@ -223,7 +223,7 @@ def _store_event_embedding(event_id: int, embedding: np.ndarray) -> None:
     with SessionLocal() as db:
         event = db.query(Event).filter(Event.id == event_id).first()
         if event:
-            event.face_embedding = embedding.astype(np.float32)
+            event.face_embedding = embedding.astype(np.float32) # type: ignore
             db.commit()
 
 

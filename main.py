@@ -65,6 +65,7 @@ from config import (
 from vision import RecognitionResult, engine
 
 from supabase import create_client, Client
+from postgrest.types import CountMethod
 supabase: Optional[Client] = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
 # ── Shared state ───────────────────────────────────────────────────────────────
@@ -557,7 +558,7 @@ def get_status():
     """Return camera status, known persons count, and server timestamp."""
     try:
         if supabase:
-            res = supabase.table('persons').select('id', count='exact').execute()
+            res = supabase.table('persons').select('id', count=CountMethod.exact).execute()
             persons_count = res.count if res.count is not None else 0
         else:
             persons_count = 0
