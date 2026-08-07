@@ -46,6 +46,7 @@ from telegram import Update
 
 import bot
 import database
+import notify
 from camera import RTSPCamera
 from config import (
     CAMERA_ID,
@@ -56,6 +57,8 @@ from config import (
     TELEGRAM_WEBHOOK_URL,
     UNKNOWN_COOLDOWN_SEC,
     AUTO_ENROLL_UNKNOWN_FACES,
+    SMTP_ALERT_UNKNOWN,
+    SMTP_ALERT_KNOWN,
 )
 from vision import RecognitionResult, engine
 
@@ -206,7 +209,8 @@ async def _handle_known_face(result: RecognitionResult, frame: np.ndarray) -> No
     """
     Log a recognition event for a known person (debounced).
 
-    No alert is sent — known persons are logged silently.
+    No Telegram alert is sent — known persons are logged silently.
+    An optional email alert is sent if SMTP_ALERT_KNOWN=True.
     """
     person_id = result.matched_person_id
     if person_id is None:
@@ -233,6 +237,20 @@ async def _handle_known_face(result: RecognitionResult, frame: np.ndarray) -> No
         result.matched_name,
         result.confidence,
     )
+
+    # Optional email alert for known person arrival
+    if SMTP_ALERT_KNOWN:
+        ts = datetime.now().strftime("%d %b %Y, %H:%M:%S")
+        asyncio.create_task(notify.send_email_alert(
+            subject=f"✅ Known Visitor: {result.matched_name}",
+            body=(
+                f"<b>Known visitor detected</b><br/>"
+                f"<b>Name:</b> {result.matched_name}<br/>"
+                f"<b>Camera:</b> {CAMERA_ID}<br/>"
+                f"<b>Time:</b> {ts}"
+            ),
+            image_path=snapshot_path,
+        ))
 
 
 
@@ -344,6 +362,21 @@ async def _handle_unknown_face(result: RecognitionResult, frame: np.ndarray) -> 
 
     if msg_id is not None:
         await database.update_event_telegram_msg(event_id, msg_id)
+
+    # Send email alert (fires alongside Telegram, non-blocking)
+    if SMTP_ALERT_UNKNOWN:
+        ts = datetime.now().strftime("%d %b %Y, %H:%M:%S")
+        asyncio.create_task(notify.send_email_alert(
+            subject=f"🚨 Unknown Person Detected — {CAMERA_ID}",
+            body=(
+                f"<b>⚠️ Security Alert: Unregistered face detected</b><br/><br/>"
+                f"<b>Camera:</b> {CAMERA_ID}<br/>"
+                f"<b>Time:</b> {ts}<br/>"
+                f"<b>Event ID:</b> #{event_id}<br/><br/>"
+                f"<i>Please review this alert in the SecureVision dashboard.</i>"
+            ),
+            image_path=snapshot_path,
+        ))
 
 
 def _save_snapshot(frame: np.ndarray, prefix: str) -> Optional[Path]:
@@ -655,6 +688,114 @@ async def reload_persons():
     persons = await database.get_all_persons_with_embeddings()
     engine.load_known_persons(persons)
     return {"message": f"Loaded {len(persons)} known persons into VisionEngine."}
+
+
+# ── Notification Settings Endpoints ────────────────────────────────────────────────
+
+class SmtpSettingsRequest(BaseModel):
+    enabled: bool = False
+    host: str = "smtp.gmail.com"
+    port: int = 587
+    use_tls: bool = True
+    user: str = ""
+    password: str = ""          # Empty string means "don't update the stored password"
+    from_addr: str = ""
+    to_emails: str = ""         # Comma-separated
+    alert_unknown: bool = True
+    alert_known: bool = False
+
+
+@app.get("/api/settings/notifications", summary="Get SMTP notification settings")
+async def get_notification_settings():
+    """Return current SMTP config. Password is always redacted."""
+    import config
+    return {
+        "smtp": {
+            "enabled": config.SMTP_ENABLED,
+            "host": config.SMTP_HOST,
+            "port": config.SMTP_PORT,
+            "use_tls": config.SMTP_USE_TLS,
+            "user": config.SMTP_USER,
+            "password": "" if not config.SMTP_PASSWORD else "••••••••",
+            "from_addr": config.SMTP_FROM,
+            "to_emails": ", ".join(config.SMTP_TO_EMAILS),
+            "alert_unknown": config.SMTP_ALERT_UNKNOWN,
+            "alert_known": config.SMTP_ALERT_KNOWN,
+        }
+    }
+
+
+@app.post("/api/settings/notifications", summary="Save SMTP notification settings")
+async def save_notification_settings(req: SmtpSettingsRequest):
+    """
+    Persist SMTP settings to the .env file and reload config module.
+    Password is only updated if a non-empty, non-redacted value is provided.
+    """
+    env_path = Path(".env")
+    if not env_path.exists():
+        raise HTTPException(status_code=500, detail=".env file not found.")
+
+    lines = env_path.read_text().splitlines(keepends=True)
+
+    updates = {
+        "SMTP_ENABLED": str(req.enabled),
+        "SMTP_HOST": req.host,
+        "SMTP_PORT": str(req.port),
+        "SMTP_USE_TLS": str(req.use_tls),
+        "SMTP_USER": req.user,
+        "SMTP_FROM": req.from_addr or req.user,
+        "SMTP_TO_EMAILS": req.to_emails,
+        "SMTP_ALERT_UNKNOWN": str(req.alert_unknown),
+        "SMTP_ALERT_KNOWN": str(req.alert_known),
+    }
+    # Only update password if a real new value was provided
+    if req.password and req.password != "••••••••":
+        updates["SMTP_PASSWORD"] = req.password
+
+    # Rewrite matching keys in-place; append any new keys
+    existing_keys = set()
+    new_lines = []
+    for line in lines:
+        key = line.split("=")[0].strip()
+        if key in updates:
+            new_lines.append(f"{key}={updates[key]}\n")
+            existing_keys.add(key)
+        else:
+            new_lines.append(line)
+
+    for key, value in updates.items():
+        if key not in existing_keys:
+            new_lines.append(f"{key}={value}\n")
+
+    env_path.write_text("".join(new_lines))
+
+    # Reload config so subsequent alert calls use the new values
+    import importlib
+    import config
+    importlib.reload(config)
+
+    return {"message": "SMTP settings saved successfully."}
+
+
+@app.post("/api/settings/notifications/test", summary="Send a test email")
+async def test_notification():
+    """Send a test email using current SMTP settings. Returns success/failure detail."""
+    success = await notify.send_email_alert(
+        subject="✅ SecureVision — Test Email",
+        body=(
+            "<b>Connection test successful!</b><br/><br/>"
+            "Your SMTP integration is configured correctly.<br/>"
+            "You will now receive security alerts at this address."
+        ),
+    )
+    if success:
+        return {"success": True, "message": "Test email sent successfully!"}
+    else:
+        raise HTTPException(
+            status_code=400,
+            detail="Failed to send test email. Check your SMTP credentials and try again.",
+        )
+
 
 
 @app.get("/", include_in_schema=False)

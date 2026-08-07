@@ -41,6 +41,22 @@ _raw_admin_id = os.getenv("TELEGRAM_ADMIN_ID", "0")
 TELEGRAM_ADMIN_ID: int = int(_raw_admin_id) if _raw_admin_id.lstrip("-").isdigit() else 0
 TELEGRAM_WEBHOOK_URL: str = os.getenv("TELEGRAM_WEBHOOK_URL", "")
 
+# ── SMTP Email Notifications ────────────────────────────────────────────────────
+SMTP_ENABLED: bool = os.getenv("SMTP_ENABLED", "False").lower() == "true"
+SMTP_HOST: str = os.getenv("SMTP_HOST", "smtp.gmail.com")
+SMTP_PORT: int = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USE_TLS: bool = os.getenv("SMTP_USE_TLS", "True").lower() == "true"
+SMTP_USER: str = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD: str = os.getenv("SMTP_PASSWORD", "")
+SMTP_FROM: str = os.getenv("SMTP_FROM", SMTP_USER)
+# Comma-separated list of recipient email addresses
+SMTP_TO_EMAILS: list[str] = [
+    e.strip() for e in os.getenv("SMTP_TO_EMAILS", "").split(",") if e.strip()
+]
+SMTP_ALERT_UNKNOWN: bool = os.getenv("SMTP_ALERT_UNKNOWN", "True").lower() == "true"
+SMTP_ALERT_KNOWN: bool = os.getenv("SMTP_ALERT_KNOWN", "False").lower() == "true"
+
+
 # ── FastAPI Server ──────────────────────────────────────────────────────────────
 SERVER_HOST: str = os.getenv("SERVER_HOST", "0.0.0.0")
 SERVER_PORT: int = int(os.getenv("SERVER_PORT", "8000"))

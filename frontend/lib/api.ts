@@ -98,3 +98,30 @@ export function snapshotUrl(snapshotPath: string | null): string | null {
   const filename = snapshotPath.split("/").pop();
   return filename ? `${API_BASE}/snapshots/${filename}` : null;
 }
+
+// ── Notification / SMTP Settings ──────────────────────────────────────────────
+
+export interface SmtpSettings {
+  enabled: boolean;
+  host: string;
+  port: number;
+  use_tls: boolean;
+  user: string;
+  password: string;
+  from_addr: string;
+  to_emails: string;
+  alert_unknown: boolean;
+  alert_known: boolean;
+}
+
+export const getNotificationSettings = (): Promise<{ smtp: SmtpSettings }> =>
+  apiFetch<{ smtp: SmtpSettings }>("/api/settings/notifications");
+
+export const saveNotificationSettings = (settings: SmtpSettings): Promise<{ message: string }> =>
+  apiFetch("/api/settings/notifications", {
+    method: "POST",
+    body: JSON.stringify(settings),
+  });
+
+export const testEmailConnection = (): Promise<{ success: boolean; message: string }> =>
+  apiFetch("/api/settings/notifications/test", { method: "POST" });
