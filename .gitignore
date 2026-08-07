@@ -16,7 +16,7 @@ env/
 attendance.db
 snapshots/
 models/
-logs/
+/logs/
 
 # IDE
 .vscode/
