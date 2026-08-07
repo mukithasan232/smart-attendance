@@ -1,8 +1,34 @@
 // lib/api.ts — Typed API client for the Security System FastAPI backend.
 // All functions return typed results and throw on non-OK responses.
 
-export const API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
-export const STREAM_URL = `${API_BASE}/api/stream`;
+export let API_BASE = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8000";
+export let STREAM_URL = `${API_BASE}/api/stream`;
+
+let isConfigLoaded = false;
+let configPromise: Promise<void> | null = null;
+
+export async function loadConfig() {
+  if (isConfigLoaded) return;
+  if (!configPromise) {
+    configPromise = (async () => {
+      try {
+        const res = await fetch('/api/config');
+        if (res.ok) {
+          const data = await res.json();
+          if (data.backendUrl) {
+            API_BASE = data.backendUrl.replace(/\/$/, '');
+            STREAM_URL = `${API_BASE}/api/stream`;
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load config:", err);
+      } finally {
+        isConfigLoaded = true;
+      }
+    })();
+  }
+  return configPromise;
+}
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -36,6 +62,7 @@ export interface DetectionEvent {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  await loadConfig();
   const res = await fetch(`${API_BASE}${path}`, {
     headers: { "Content-Type": "application/json" },
     ...init,
@@ -65,6 +92,7 @@ export async function uploadPerson(
   name: string,
   imageFile: File
 ): Promise<{ message: string; person_id: number }> {
+  await loadConfig();
   const form = new FormData();
   form.append("name", name);
   form.append("image", imageFile);
@@ -92,9 +120,6 @@ export const registerPersonFromEvent = (
 /** Build the URL for a snapshot served by the backend static files mount. */
 export function snapshotUrl(snapshotPath: string | null): string | null {
   if (!snapshotPath) return null;
-  // The backend mounts /snapshots → ./snapshots directory
-  // snapshot_path from DB is an absolute local path like ./snapshots/unknown_20260802_...jpg
-  // Extract filename and serve via the static endpoint
   const filename = snapshotPath.split("/").pop();
   return filename ? `${API_BASE}/snapshots/${filename}` : null;
 }
@@ -156,4 +181,3 @@ export const deleteCamera = (id: string): Promise<{ message: string }> =>
 
 export const applyCamera = (id: string): Promise<{ message: string; url: string }> =>
   apiFetch(`/api/settings/cameras/${id}/apply`, { method: "POST" });
-

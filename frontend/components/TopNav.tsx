@@ -1,9 +1,9 @@
 "use client";
 
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, Menu } from "lucide-react";
 import { usePathname } from "next/navigation";
 
-export default function TopNav() {
+export default function TopNav({ onOpenMenu }: { onOpenMenu?: () => void }) {
   const pathname = usePathname();
   
   const getPageTitle = () => {
@@ -14,7 +14,17 @@ export default function TopNav() {
 
   return (
     <header className="top-nav">
-      <div className="top-nav-title">{getPageTitle()}</div>
+      <div className="flex items-center gap-3">
+        {onOpenMenu && (
+          <button 
+            onClick={onOpenMenu} 
+            className="flex md:hidden p-1 text-slate-500 hover:text-slate-800 focus:outline-none"
+          >
+            <Menu size={24} />
+          </button>
+        )}
+        <div className="top-nav-title">{getPageTitle()}</div>
+      </div>
       
       <div className="top-nav-actions">
         <div className="relative hidden md:block">

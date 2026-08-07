@@ -13,54 +13,6 @@ import {
   CalendarDays, X,
 } from "lucide-react";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MOCK DATA — used when the backend is offline.
-// TODO: Remove mock data once the FastAPI backend is reachable in production.
-//       The real fetch happens in fetchEvents() below via GET /api/events.
-// ─────────────────────────────────────────────────────────────────────────────
-const MOCK_EVENTS: DetectionEvent[] = [
-  {
-    id: 1,
-    person_id: 12,
-    person_name: "Alex Mercer",
-    timestamp: new Date(Date.now() - 1000 * 60 * 8).toISOString(),
-    snapshot_path: "",
-    status: "Known",
-    buffer_status: "added",
-    camera_id: "cam-01 · Main Entrance",
-  },
-  {
-    id: 2,
-    person_id: null,
-    person_name: "Unknown",
-    timestamp: new Date(Date.now() - 1000 * 60 * 22).toISOString(),
-    snapshot_path: "",
-    status: "Unknown",
-    buffer_status: "pending",
-    camera_id: "cam-02 · Back Door",
-  },
-  {
-    id: 3,
-    person_id: 7,
-    person_name: "Sarah Connor",
-    timestamp: new Date(Date.now() - 1000 * 60 * 45).toISOString(),
-    snapshot_path: "",
-    status: "Known",
-    buffer_status: "added",
-    camera_id: "cam-01 · Main Entrance",
-  },
-  {
-    id: 4,
-    person_id: null,
-    person_name: "Unknown",
-    timestamp: new Date(Date.now() - 1000 * 60 * 90).toISOString(),
-    snapshot_path: "",
-    status: "Unknown",
-    buffer_status: "ignored",
-    camera_id: "cam-03 · Lobby",
-  },
-];
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function formatTime(ts: string) {
@@ -119,7 +71,6 @@ function SkeletonRow() {
 export default function LogsPage() {
   const [events, setEvents]       = useState<DetectionEvent[]>([]);
   const [loading, setLoading]     = useState(true);
-  const [usingMock, setUsingMock] = useState(false);
   const [search, setSearch]       = useState("");
   const [dateRange, setDateRange] = useState("all");
   const [statusFilter, setStatusFilter] = useState<"All" | "Known" | "Unknown">("All");
@@ -132,17 +83,13 @@ export default function LogsPage() {
   };
 
   // ── Data fetching ─────────────────────────────────────────────────────────
-  // TODO: Replace MOCK_EVENTS fallback with a proper error boundary / empty state
-  //       once the FastAPI backend at /api/events is always reachable.
   const fetchEvents = useCallback(async () => {
     try {
       const data = await getEvents(200); // GET /api/events?limit=200
-      setEvents(data);
-      setUsingMock(false);
-    } catch {
-      // Backend offline — fall back to mock data so the UI is still useful
-      setEvents(MOCK_EVENTS);
-      setUsingMock(true);
+      setEvents(data || []);
+    } catch (err) {
+      console.error("Failed to fetch events:", err);
+      setEvents([]);
     } finally {
       setLoading(false);
     }
@@ -248,11 +195,6 @@ export default function LogsPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
-            {usingMock && (
-              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-amber-50 border border-amber-200 text-amber-700 text-xs font-medium">
-                <AlertCircle size={12} /> Demo data — backend offline
-              </span>
-            )}
             <button
               onClick={fetchEvents}
               disabled={loading}
@@ -277,16 +219,19 @@ export default function LogsPage() {
             { label: "Known Visitors",  value: knownCount,    color: "text-emerald-600", bg: "bg-emerald-50", icon: <ShieldCheck   size={20} className="text-emerald-500" /> },
             { label: "Unknown / Alerts",value: unknownCount,  color: "text-red-600",     bg: "bg-red-50",     icon: <ShieldAlert   size={20} className="text-red-500" /> },
           ].map(s => (
-            <div key={s.label} className="bg-white rounded-[20px] p-6 shadow-sm border border-slate-100 flex flex-row items-center justify-between gap-4">
-              <div className="flex flex-col justify-center">
-                <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">{s.label}</h3>
-                <p className={`text-3xl font-extrabold text-slate-900 ${s.color}`}>
+            <div key={s.label} className="bg-white rounded-[20px] px-6 py-5 shadow-sm border border-slate-100 flex flex-row items-center justify-between h-full">
+              <div className="flex flex-col justify-center m-0">
+                <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+                  {s.label}
+                </p>
+                <p className={`text-4xl font-extrabold text-slate-900 leading-none ${s.color}`}>
                   {loading
                     ? <span className="inline-block w-12 h-6 bg-slate-200 rounded animate-pulse" />
                     : s.value
                   }
                 </p>
               </div>
+              
               <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${s.bg}`}>
                 {s.icon}
               </div>
@@ -500,7 +445,6 @@ export default function LogsPage() {
                 {" "}of{" "}
                 <span className="font-semibold text-slate-700">{events.length}</span>
                 {" "}events
-                {usingMock && <span className="ml-2 text-amber-600">(demo data)</span>}
               </span>
               <span>Last updated: {new Date().toLocaleTimeString()}</span>
             </div>

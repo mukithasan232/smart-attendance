@@ -320,6 +320,58 @@ export default function SettingsPage() {
 
   // ── Database tab state ──────────────────────────────────────────────────────
   const [retention, setRetention] = useState('30');
+  const [backendUrl, setBackendUrl] = useState('');
+  const [supabaseUrl, setSupabaseUrl] = useState('');
+  const [supabaseKey, setSupabaseKey] = useState('');
+  const [dbLoading, setDbLoading] = useState(false);
+  const [isTestingDb, setIsTestingDb] = useState(false);
+  const [showDbKey, setShowDbKey] = useState(false);
+
+  useEffect(() => {
+    if (activeTab === 'database') {
+      fetch('/api/config')
+        .then(res => res.json())
+        .then(data => {
+          if (data.backendUrl) setBackendUrl(data.backendUrl);
+          if (data.supabaseUrl) setSupabaseUrl(data.supabaseUrl);
+          if (data.supabaseKey) setSupabaseKey(data.supabaseKey);
+        })
+        .catch(() => {});
+    }
+  }, [activeTab]);
+
+  const handleTestDbConnection = async () => {
+    setIsTestingDb(true);
+    try {
+      const res = await fetch(`${backendUrl}/api/status`);
+      if (res.ok) {
+        showToast('Connection to backend successful!', 'success');
+      } else {
+        throw new Error('Failed to connect to backend.');
+      }
+    } catch (err: unknown) {
+      showToast((err as Error).message || 'Connection failed.', 'error');
+    } finally {
+      setIsTestingDb(false);
+    }
+  };
+
+  const handleSaveDbConfig = async () => {
+    setDbLoading(true);
+    try {
+      const res = await fetch('/api/config', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ backendUrl, supabaseUrl, supabaseKey }),
+      });
+      if (!res.ok) throw new Error('Failed to save configuration');
+      showToast('Database configuration saved.', 'success');
+    } catch (err: unknown) {
+      showToast((err as Error).message, 'error');
+    } finally {
+      setDbLoading(false);
+    }
+  };
 
   // ── SMTP tab state ──────────────────────────────────────────────────────────
   const [smtpLoading, setSmtpLoading] = useState(false);
@@ -773,32 +825,83 @@ export default function SettingsPage() {
 
             {/* ── DATABASE ───────────────────────────────────────────────────── */}
             {activeTab === 'database' && (
-              <div className="bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100 flex flex-col gap-6 w-full overflow-hidden">
-                <div className="settings-card-header">
-                  <h2 className="settings-card-title">Database & System</h2>
-                  <p className="settings-card-subtitle">Manage data retention policies and perform manual backups.</p>
-                </div>
-                <div className="settings-card-body">
-                  <div className="form-group">
-                    <label className="form-label">Visitor Log Retention Policy</label>
-                    <select className="w-full md:w-auto md:min-w-[300px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" value={retention} onChange={e => setRetention(e.target.value)} style={{ maxWidth: '400px', cursor: 'pointer' }}>
-                      <option value="7">Auto-delete after 7 days</option>
-                      <option value="30">Auto-delete after 30 days</option>
-                      <option value="90">Auto-delete after 90 days</option>
-                      <option value="forever">Keep forever (Manual deletion only)</option>
-                    </select>
+              <div className="flex flex-col gap-6 w-full">
+                {/* Connection Setup */}
+                <div className="bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100 flex flex-col gap-6 w-full overflow-hidden">
+                  <div className="settings-card-header">
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                      <div style={{ width: '40px', height: '40px', borderRadius: '10px', background: 'linear-gradient(135deg,#3b82f6,#2563eb)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <Plug size={20} color="white" />
+                      </div>
+                      <div>
+                        <h2 className="settings-card-title" style={{ marginBottom: '2px' }}>Database & Backend Setup</h2>
+                        <p className="settings-card-subtitle">Configure backend API URLs and database connection keys dynamically.</p>
+                      </div>
+                    </div>
                   </div>
-                  <div style={{ marginTop: '24px', padding: '20px', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', background: '#f8fafc' }}>
-                    <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Manual Backup</h3>
-                    <p className="setting-desc" style={{ marginBottom: '16px' }}>Download a complete snapshot of your database and visitor logs.</p>
-                    <button className="btn-secondary">Download Backup (.zip)</button>
+                  <div className="settings-card-body">
+                    <div className="form-group">
+                      <label className="form-label">FastAPI Backend URL</label>
+                      <input type="text" className="w-full md:w-auto md:min-w-[400px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="http://localhost:8000" value={backendUrl} onChange={e => setBackendUrl(e.target.value)} />
+                    </div>
+                    
+                    <div style={{ borderTop: '1px solid var(--border)', margin: '24px 0' }} />
+                    <h3 style={{ fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '16px' }}>Database Credentials (Supabase)</h3>
+                    
+                    <div className="form-group">
+                      <label className="form-label">Supabase URL</label>
+                      <input type="text" className="w-full md:w-auto md:min-w-[400px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="https://your-project.supabase.co" value={supabaseUrl} onChange={e => setSupabaseUrl(e.target.value)} />
+                    </div>
+                    <div className="form-group">
+                      <label className="form-label">Anon Key / Service Role Key</label>
+                      <div style={{ position: 'relative', maxWidth: '400px' }}>
+                        <input type={showDbKey ? 'text' : 'password'} className="w-full md:w-auto md:min-w-[400px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="eyJhbGci..." value={supabaseKey} onChange={e => setSupabaseKey(e.target.value)} style={{ paddingRight: '40px' }} />
+                        <button type="button" onClick={() => setShowDbKey(!showDbKey)} style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', padding: 0, display: 'flex' }}>
+                          {showDbKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="settings-card-footer">
+                    <button className="btn-secondary" onClick={handleTestDbConnection} disabled={isTestingDb} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {isTestingDb ? <Loader2 size={16} className="animate-spin" /> : <Plug size={16} />}
+                      Test Connection
+                    </button>
+                    <button className="btn-primary" onClick={handleSaveDbConfig} disabled={dbLoading} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      {dbLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                      Save Configuration
+                    </button>
                   </div>
                 </div>
-                <div className="settings-card-footer">
-                  <button className="btn-primary" onClick={handleSave} disabled={isLoading}>
-                    {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
-                    Save Changes
-                  </button>
+
+                {/* Legacy System Settings */}
+                <div className="bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100 flex flex-col gap-6 w-full overflow-hidden">
+                  <div className="settings-card-header">
+                    <h2 className="settings-card-title">System Settings</h2>
+                    <p className="settings-card-subtitle">Manage data retention policies and perform manual backups.</p>
+                  </div>
+                  <div className="settings-card-body">
+                    <div className="form-group">
+                      <label className="form-label">Visitor Log Retention Policy</label>
+                      <select className="w-full md:w-auto md:min-w-[300px] px-4 py-2.5 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500" value={retention} onChange={e => setRetention(e.target.value)} style={{ maxWidth: '400px', cursor: 'pointer' }}>
+                        <option value="7">Auto-delete after 7 days</option>
+                        <option value="30">Auto-delete after 30 days</option>
+                        <option value="90">Auto-delete after 90 days</option>
+                        <option value="forever">Keep forever (Manual deletion only)</option>
+                      </select>
+                    </div>
+                    <div style={{ marginTop: '24px', padding: '20px', border: '1px solid var(--border)', borderRadius: 'var(--radius-md)', background: '#f8fafc' }}>
+                      <h3 style={{ fontSize: '14px', fontWeight: 600, marginBottom: '8px' }}>Manual Backup</h3>
+                      <p className="setting-desc" style={{ marginBottom: '16px' }}>Download a complete snapshot of your database and visitor logs.</p>
+                      <button className="btn-secondary">Download Backup (.zip)</button>
+                    </div>
+                  </div>
+                  <div className="settings-card-footer">
+                    <button className="btn-primary" onClick={handleSave} disabled={isLoading}>
+                      {isLoading ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                      Save System Settings
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

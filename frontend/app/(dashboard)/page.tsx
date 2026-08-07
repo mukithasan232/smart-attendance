@@ -12,38 +12,6 @@ import {
 } from "lucide-react";
 import { getEvents, getStatus, DetectionEvent, SystemStatus } from "@/lib/api";
 
-// ─────────────────────────────────────────────────────────────────────────────
-// MOCK DATA — used when the backend is offline.
-// TODO: Replace with real API calls once FastAPI backend is reachable.
-// ─────────────────────────────────────────────────────────────────────────────
-
-const MOCK_TRAFFIC: { day: string; known: number; unknown: number; total: number }[] = [
-  { day: "Mon", known: 38, unknown: 4,  total: 42 },
-  { day: "Tue", known: 52, unknown: 7,  total: 59 },
-  { day: "Wed", known: 61, unknown: 5,  total: 66 },
-  { day: "Thu", known: 45, unknown: 9,  total: 54 },
-  { day: "Fri", known: 78, unknown: 12, total: 90 },
-  { day: "Sat", known: 33, unknown: 3,  total: 36 },
-  { day: "Sun", known: 29, unknown: 2,  total: 31 },
-];
-
-const MOCK_RECENT: DetectionEvent[] = [
-  { id: 101, person_id: 5,    person_name: "Alex Mercer",   timestamp: new Date(Date.now() - 1000 * 60 * 2).toISOString(),  snapshot_path: "", status: "Known",   buffer_status: "added",   camera_id: "cam-01" },
-  { id: 102, person_id: null, person_name: "Unknown",        timestamp: new Date(Date.now() - 1000 * 60 * 8).toISOString(),  snapshot_path: "", status: "Unknown", buffer_status: "pending", camera_id: "cam-02" },
-  { id: 103, person_id: 12,   person_name: "Sarah Connor",  timestamp: new Date(Date.now() - 1000 * 60 * 15).toISOString(), snapshot_path: "", status: "Known",   buffer_status: "added",   camera_id: "cam-01" },
-  { id: 104, person_id: null, person_name: "Unknown",        timestamp: new Date(Date.now() - 1000 * 60 * 28).toISOString(), snapshot_path: "", status: "Unknown", buffer_status: "ignored", camera_id: "cam-03" },
-  { id: 105, person_id: 3,    person_name: "James Walker",  timestamp: new Date(Date.now() - 1000 * 60 * 41).toISOString(), snapshot_path: "", status: "Known",   buffer_status: "added",   camera_id: "cam-01" },
-];
-
-const MOCK_STATUS: SystemStatus = {
-  status: "running",
-  camera_id: "cam-01",
-  camera_running: true,
-  known_persons_count: 24,
-  timestamp: new Date().toISOString(),
-  version: "2.0.0",
-};
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function timeAgo(ts: string): string {
@@ -95,11 +63,16 @@ function HRMCard({
   };
 
   return (
-    <div className="bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100 flex flex-row items-center justify-between gap-4">
-      <div className="flex flex-col justify-center">
-        <h3 className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1">{title}</h3>
-        <p className="text-3xl font-extrabold text-slate-900">{value}</p>
+    <div className="bg-white rounded-[20px] px-6 py-5 shadow-sm border border-slate-100 flex flex-row items-center justify-between h-full">
+      <div className="flex flex-col justify-center m-0">
+        <p className="text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">
+          {title}
+        </p>
+        <p className="text-4xl font-extrabold text-slate-900 leading-none">
+          {value}
+        </p>
       </div>
+      
       <div className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${colors[iconColor]}`}>
         {icon}
       </div>
@@ -208,9 +181,8 @@ function KnownUnknownDonut({ known, unknown }: { known: number; unknown: number 
 export default function DashboardPage() {
   const [events,    setEvents]    = useState<DetectionEvent[]>([]);
   const [status,    setStatus]    = useState<SystemStatus | null>(null);
-  const [traffic]   = useState(MOCK_TRAFFIC);
+  const [traffic]   = useState<{ day: string; known: number; unknown: number; total: number }[]>([]);
   const [loading,   setLoading]   = useState(true);
-  const [usingMock, setUsingMock] = useState(false);
   const [feedVisible, setFeedVisible] = useState(false);
   // eslint-disable-next-line
   const [uptimeStart] = useState(Date.now() - 1000 * 60 * 60 * 3.5); // mock 3.5h uptime
@@ -232,15 +204,11 @@ export default function DashboardPage() {
         getEvents(50),   // GET /api/events?limit=50
         getStatus(),     // GET /api/status
       ]);
-      setEvents(evData);
+      setEvents(evData || []);
       setStatus(sysStatus);
-      setUsingMock(false);
-    } catch {
-      // Backend offline — use mock data
-      setEvents(MOCK_RECENT);
-      setStatus(MOCK_STATUS);
-      setUsingMock(true);
-      // TODO: Remove mock fallback once backend is always reachable
+    } catch (err) {
+      console.error("Failed to fetch dashboard data:", err);
+      setEvents([]);
     } finally {
       setLoading(false);
       setTimeout(() => setFeedVisible(true), 100);
@@ -260,8 +228,8 @@ export default function DashboardPage() {
     const d = new Date(e.timestamp); const today = new Date();
     return d.getDate() === today.getDate() && d.getMonth() === today.getMonth();
   });
-  const totalToday   = todayEvents.length   || (usingMock ? 142 : 0);
-  const unknownToday = todayEvents.filter(e => e.status === "Unknown").length || (usingMock ? 8 : 0);
+  const totalToday   = todayEvents.length;
+  const unknownToday = todayEvents.filter(e => e.status === "Unknown").length;
   const knownToday   = totalToday - unknownToday;
   const recentFive   = events.slice(0, 5);
 
@@ -385,8 +353,8 @@ export default function DashboardPage() {
           {/* Quick stats with grid background wrappers */}
           <div className="mt-8 pt-6 border-t border-slate-100 grid grid-cols-2 gap-4">
             {[
-              { label: "Registered", value: status?.known_persons_count ?? 24 },
-              { label: "Avg Visitors", value: Math.round(traffic.reduce((s, d) => s + d.total, 0) / traffic.length) },
+              { label: "Registered", value: status?.known_persons_count ?? 0 },
+              { label: "Avg Visitors", value: traffic.length ? Math.round(traffic.reduce((s, d) => s + d.total, 0) / traffic.length) : 0 },
             ].map(s => (
               <div key={s.label} className="bg-slate-50 rounded-xl p-4 flex flex-col items-center justify-center text-center">
                 <p className="text-[11px] uppercase tracking-wider text-slate-500 font-bold mb-1">{s.label}</p>
@@ -480,7 +448,7 @@ export default function DashboardPage() {
               {[
                 { label: "Core Version",   value: status?.version ?? "2.0.0" },
                 { label: "System Uptime",  value: uptimeStr(uptimeStart) },
-                { label: "Total Profiles", value: status?.known_persons_count ?? 24 },
+                { label: "Total Profiles", value: status?.known_persons_count ?? 0 },
               ].map(row => (
                 <div key={row.label} className="flex justify-between items-center text-sm">
                   <span className="text-slate-500 font-semibold">{row.label}</span>

@@ -553,27 +553,43 @@ async def _register_person_from_telegram(data: dict) -> None:
 # ── REST API Endpoints ─────────────────────────────────────────────────────────
 
 @app.get("/api/status", summary="System health check")
-async def get_status():
+def get_status():
     """Return camera status, known persons count, and server timestamp."""
-    persons = await database.get_all_persons()
+    try:
+        if supabase:
+            res = supabase.table('persons').select('id', count='exact').execute()
+            persons_count = res.count if res.count is not None else 0
+        else:
+            persons_count = 0
+    except Exception as exc:
+        logger.error(f"Supabase count error: {exc}")
+        persons_count = 0
+        
     return {
         "status": "running",
         "camera_id": CAMERA_ID,
         "camera_running": camera.is_running if camera else False,
-        "known_persons_count": len(persons),
+        "known_persons_count": persons_count,
         "timestamp": datetime.now().isoformat(),
         "version": "2.0.0",
     }
 
 
 @app.get("/api/events", summary="Recent detection events")
-async def get_events(limit: int = 50):
+def get_events(limit: int = 50):
     """
-    Return the most recent detection events (Known + Unknown).
-    Each event includes the person_name (or 'Unknown'), timestamp, and snapshot path.
+    Return the most recent detection events directly from Supabase `detection_logs`.
     """
-    events = await database.get_recent_events(limit=limit)
-    return events
+    if not supabase:
+        logger.warning("Supabase client not initialized.")
+        return []
+        
+    try:
+        res = supabase.table('detection_logs').select('*').order('timestamp', desc=True).limit(limit).execute()
+        return res.data
+    except Exception as exc:
+        logger.error(f"Supabase fetch error: {exc}")
+        return []
 
 
 @app.get("/api/persons", summary="List known persons")
