@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import Link from "next/link";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell,
@@ -431,12 +432,12 @@ export default function DashboardPage() {
           </div>
 
           {!loading && (
-            <a
+            <Link
               href="/logs"
               className="mt-6 flex items-center justify-center gap-2 text-sm font-bold text-indigo-600 hover:text-indigo-700 bg-indigo-50/50 hover:bg-indigo-50 py-3.5 rounded-xl transition-colors border border-indigo-100/50"
             >
               View All Logs →
-            </a>
+            </Link>
           )}
         </div>
 
