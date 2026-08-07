@@ -268,12 +268,13 @@ class VisionEngine:
         l_channel, a, b = cv2.split(lab)
         
         # If the frame is too dark (mean lightness < 80), apply CLAHE
-        if np.mean(l_channel) < 80:
+        mean_l = cv2.mean(l_channel)[0]
+        if mean_l < 80:
             clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
             cl = clahe.apply(l_channel)
             merged = cv2.merge((cl, a, b))
             enhanced_frame = cv2.cvtColor(merged, cv2.COLOR_LAB2BGR)
-            logger.debug("Applied CLAHE low-light enhancement (mean lightness: {:.1f})", np.mean(l_channel))
+            logger.debug("Applied CLAHE low-light enhancement (mean lightness: {:.1f})", mean_l)
         else:
             enhanced_frame = frame
 

@@ -1,7 +1,7 @@
 """
 scripts/test_db.py — Verify database.py works correctly.
 
-Creates test users, logs attendance, and retrieves records.
+Creates test persons, logs events, and retrieves records.
 """
 import sys
 import asyncio
@@ -13,11 +13,11 @@ sys.path.insert(0, str(Path(__file__).parent.parent))
 import numpy as np
 from database import (
     init_db,
-    add_user,
-    get_all_users,
-    log_attendance,
-    get_recent_logs,
-    delete_user,
+    add_person,
+    get_all_persons_with_embeddings,
+    log_event,
+    get_recent_events,
+    delete_person,
 )
 
 
@@ -28,31 +28,31 @@ async def main():
     await init_db()
     print("✅ Database initialised")
 
-    # Add test user
-    fake_embedding = np.random.rand(512).astype(np.float32)  # type: ignore
-    fake_embedding /= np.linalg.norm(fake_embedding)  # type: ignore
-    user_id = await add_user("TEST001", "Test Person", fake_embedding)
-    print(f"✅ User added: id={user_id}")
+    # Add test person
+    fake_embedding = np.random.rand(512).astype(np.float32)
+    fake_embedding /= np.linalg.norm(fake_embedding)
+    person_id = await add_person("Test Person", fake_embedding)
+    print(f"✅ Person added: id={person_id}")
 
-    # List users
-    users = await get_all_users()
-    print(f"✅ Users in DB: {len(users)}")
-    for u in users:
-        print(f"   • {u['employee_id']} — {u['name']} | emb shape={u['embedding'].shape}")
+    # List persons
+    persons = await get_all_persons_with_embeddings()
+    print(f"✅ Persons in DB: {len(persons)}")
+    for p in persons:
+        print(f"   • ID:{p['id']} — {p['name']} | emb shape={p['embedding'].shape}")
 
-    # Log attendance
-    log_id = await log_attendance("TEST001", "Test Person", confidence=0.95)
-    print(f"✅ Attendance logged: log_id={log_id}")
+    # Log event
+    event_id = await log_event("test_snap.jpg", "Known", person_id=person_id)
+    print(f"✅ Event logged: event_id={event_id}")
 
-    # Recent logs
-    logs = await get_recent_logs(limit=5)
-    print(f"✅ Recent logs ({len(logs)} rows):")
-    for log in logs:
-        print(f"   • {log['employee_id']} at {log['logged_at']} | synced={log['hrm_synced']}")
+    # Recent events
+    events = await get_recent_events(limit=5)
+    print(f"✅ Recent events ({len(events)} rows):")
+    for event in events:
+        print(f"   • {event['person_name']} at {event['timestamp']} | status={event['status']}")
 
-    # Delete test user
-    deleted = await delete_user("TEST001")
-    print(f"✅ User deleted: {deleted}")
+    # Delete test person
+    deleted = await delete_person(person_id)
+    print(f"✅ Person deleted: {deleted}")
 
     print("\n=== All tests passed! ===")
 
