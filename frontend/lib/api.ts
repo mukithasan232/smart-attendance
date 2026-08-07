@@ -44,6 +44,7 @@ export interface SystemStatus {
 export interface Person {
   id: number;
   name: string;
+  designation?: string;
   snapshot_path: string | null;
   created_at: string;
 }
@@ -90,14 +91,16 @@ export const getEvents = (limit = 50): Promise<DetectionEvent[]> =>
 
 export async function uploadPerson(
   name: string,
+  designation: string,
   imageFile: File
 ): Promise<{ message: string; person_id: number }> {
   await loadConfig();
   const form = new FormData();
   form.append("name", name);
+  form.append("designation", designation);
   form.append("image", imageFile);
 
-  const res = await fetch(`${API_BASE}/api/persons/upload`, {
+  const res = await fetch(`${API_BASE}/api/persons`, {
     method: "POST",
     body: form,
   });

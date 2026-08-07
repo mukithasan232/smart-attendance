@@ -594,11 +594,14 @@ def get_events(limit: int = 50):
 
 
 @app.get("/api/persons", summary="List known persons")
-async def list_persons():
-    """Return all active known persons (no embeddings — safe for API consumers)."""
+def list_persons():
+    """Return all active known persons, fetching directly from Supabase."""
+    if not supabase:
+        logger.warning("Supabase client not initialized.")
+        return []
     try:
-        persons = await database.get_all_persons()
-        return persons
+        res = supabase.table('persons').select('id, name, designation, snapshot_path, created_at, is_active').eq('is_active', 1).order('created_at', desc=True).execute()
+        return res.data
     except Exception as exc:
         logger.error(f"Failed to load persons list: {exc}")
         return []
@@ -654,69 +657,58 @@ async def register_person_from_event(event_id: int, req: RegisterPersonRequest):
     }
 
 
-@app.post("/api/persons/upload", status_code=201, summary="Register person via photo")
+@app.post("/api/persons", status_code=201, summary="Register person via photo")
 async def upload_person(
     name: str = Form(...),
+    designation: str = Form(...),
     image: UploadFile = File(...),
 ):
     """
-    Register a new known person by uploading a clear photo.
-    The system detects the face, extracts its embedding, and stores it.
-
-    Constraints:
-      • Image must contain exactly one face.
-      • Photo should be clear and well-lit for best accuracy.
+    Register a new known person. Uploads face to Supabase Storage and saves metadata.
     """
+    if not supabase:
+        raise HTTPException(status_code=500, detail="Supabase not configured.")
+
     contents = await image.read()
-    nparr = np.frombuffer(contents, np.uint8)
-    frame = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-
-    if frame is None:
-        raise HTTPException(status_code=400, detail="Invalid image file.")
-
-    embedding = engine.generate_embedding(frame)
-    if embedding is None:
-        raise HTTPException(
-            status_code=400,
-            detail="No face detected in the uploaded image. Please use a clear, well-lit photo.",
-        )
-
-    # Save the registration photo to Supabase or fallback
+    
+    # Save the registration photo to Supabase Storage ('faces' bucket)
     ts = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
     filename = f"registered_{ts}.jpg"
     
-    success, encoded = cv2.imencode('.jpg', frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
-    if success and supabase:
-        try:
-            supabase.storage.from_('snapshots').upload(
-                path=filename,
-                file=encoded.tobytes(),
-                file_options={"content-type": "image/jpeg"}
-            )
-            snapshot_path = supabase.storage.from_('snapshots').get_public_url(filename)
-        except Exception as e:
-            logger.error(f"Supabase upload failed: {e}. Falling back to local.")
-            snapshot_path = str(SNAPSHOTS_DIR / filename)
-            cv2.imwrite(snapshot_path, frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
-    else:
-        snapshot_path = str(SNAPSHOTS_DIR / filename)
-        cv2.imwrite(snapshot_path, frame, [cv2.IMWRITE_JPEG_QUALITY, 90])
+    try:
+        supabase.storage.from_('faces').upload(
+            path=filename,
+            file=contents,
+            file_options={"content-type": image.content_type or "image/jpeg"}
+        )
+        snapshot_path = supabase.storage.from_('faces').get_public_url(filename)
+    except Exception as e:
+        logger.error(f"Supabase upload failed: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to upload image: {e}")
+
+    # -------------------------------------------------------------------------
+    # [AI Engine Placeholder]
+    # Here, the Python facial embedding extraction logic (InsightFace/pgvector)
+    # will run to extract the face vector from `contents` and store it.
+    # For now, we proceed to save the metadata.
+    # -------------------------------------------------------------------------
 
     try:
-        person_id = await database.add_person(
-            name=name,
-            embedding=embedding,
-            snapshot_path=str(snapshot_path),
-        )
+        res = supabase.table('persons').insert({
+            "name": name,
+            "designation": designation,
+            "snapshot_path": snapshot_path,
+            "is_active": 1
+        }).execute()
+        person_id = res.data[0]['id']
     except Exception as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-
-    # With pgvector, we no longer need to update the in-memory cache
+        logger.error(f"Failed to insert person: {exc}")
+        raise HTTPException(status_code=500, detail=str(exc))
 
     return {
         "message": f"'{name}' registered successfully.",
         "person_id": person_id,
-        "snapshot_path": str(snapshot_path),
+        "snapshot_path": snapshot_path,
     }
 
 
