@@ -1,5 +1,5 @@
 "use client";
-
+/* eslint-disable @next/next/no-img-element */
 // components/EventsTable.tsx — Auto-refreshing recent detection events log.
 
 import { useEffect, useState, useCallback } from "react";

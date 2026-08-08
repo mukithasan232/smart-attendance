@@ -1,5 +1,5 @@
 "use client";
-
+/* eslint-disable @next/next/no-img-element, react-hooks/set-state-in-effect */
 import { useEffect, useState, useCallback } from "react";
 import { getPersons, deletePerson, uploadPerson, snapshotUrl, Person } from "@/lib/api";
 import { UserPlus, Trash2, User, Search, RefreshCw, AlertCircle, CheckCircle } from "lucide-react";

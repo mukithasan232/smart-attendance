@@ -27,7 +27,7 @@ export default function SignupPage() {
       await new Promise((resolve) => setTimeout(resolve, 1500));
       setToast({ message: 'Account created successfully! Redirecting...', type: 'success' });
       // Here we would handle actual redirection: router.push('/pricing') or router.push('/dashboard')
-    } catch (err) {
+    } catch {
       setToast({ message: 'An error occurred. Please try again.', type: 'error' });
     } finally {
       setIsLoading(false);

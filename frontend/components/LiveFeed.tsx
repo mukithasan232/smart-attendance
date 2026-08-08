@@ -1,5 +1,5 @@
 "use client";
-
+/* eslint-disable @next/next/no-img-element */
 // components/LiveFeed.tsx — MJPEG stream viewer with connection state handling.
 // Browsers natively decode multipart/x-mixed-replace streams via <img> tags.
 

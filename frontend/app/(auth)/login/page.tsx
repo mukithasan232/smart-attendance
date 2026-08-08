@@ -29,7 +29,7 @@ export default function LoginPage() {
       } else {
         setToast({ message: 'Invalid credentials. Please try again.', type: 'error' });
       }
-    } catch (err) {
+    } catch {
       setToast({ message: 'Error logging in.', type: 'error' });
     } finally {
       setIsLoading(false);

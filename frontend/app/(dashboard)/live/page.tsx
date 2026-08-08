@@ -1,5 +1,5 @@
 "use client";
-
+/* eslint-disable @next/next/no-img-element */
 import React, { useState } from 'react';
 import { Maximize2, RefreshCw, Activity, ShieldCheck, Video, ServerCrash, Loader2 } from 'lucide-react';
 import { STREAM_URL } from '@/lib/api';

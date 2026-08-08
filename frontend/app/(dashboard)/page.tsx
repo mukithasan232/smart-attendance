@@ -8,7 +8,7 @@ import {
 } from "recharts";
 import {
   Users, AlertTriangle, Video,
-  ShieldCheck, ShieldAlert, RefreshCw, Clock, Wifi,
+  ShieldCheck, ShieldAlert, RefreshCw,
 } from "lucide-react";
 import { getEvents, getStatus, DetectionEvent, SystemStatus } from "@/lib/api";
 

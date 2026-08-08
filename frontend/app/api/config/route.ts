@@ -10,8 +10,8 @@ export async function GET() {
     try {
       const fileContent = await fs.readFile(CONFIG_FILE, 'utf-8');
       configData = JSON.parse(fileContent);
-    } catch (err: any) {
-      if (err.code !== 'ENOENT') {
+    } catch (err: unknown) {
+      if ((err as { code?: string }).code !== 'ENOENT') {
         throw err;
       }
       // If file doesn't exist, fallback to environment variables
@@ -23,8 +23,8 @@ export async function GET() {
     }
     
     return NextResponse.json(configData);
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }
 
@@ -43,7 +43,7 @@ export async function POST(req: Request) {
     await fs.writeFile(CONFIG_FILE, JSON.stringify(configData, null, 2), 'utf-8');
     
     return NextResponse.json({ message: 'Configuration saved successfully', config: configData });
-  } catch (error: any) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  } catch (error: unknown) {
+    return NextResponse.json({ error: (error as Error).message }, { status: 500 });
   }
 }
