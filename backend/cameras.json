@@ -1,0 +1,9 @@
+[
+    {
+        "id": "default-0",
+        "name": "Built-in Webcam",
+        "url": "0",
+        "location": "Local",
+        "enabled": false
+    }
+]

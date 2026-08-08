@@ -1,16 +1,18 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import {
   getEvents,
   snapshotUrl,
   registerPersonFromEvent,
+  clearAllEvents,
   DetectionEvent,
 } from "@/lib/api";
 import {
   Search, Download, RefreshCw, ShieldCheck, ShieldAlert,
   Eye, UserPlus, CheckCircle, AlertCircle, ClipboardList,
-  CalendarDays, X,
+  CalendarDays, X, Trash2
 } from "lucide-react";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -47,7 +49,7 @@ function AvatarInitial({ name, isKnown }: { name: string; isKnown: boolean }) {
         isKnown ? "bg-indigo-100 text-indigo-700" : "bg-red-100 text-red-700"
       }`}
     >
-      {name.charAt(0).toUpperCase()}
+      {(name || "?").charAt(0).toUpperCase()}
     </div>
   );
 }
@@ -69,6 +71,7 @@ function SkeletonRow() {
 // ── Main Page ─────────────────────────────────────────────────────────────────
 
 export default function LogsPage() {
+  const router = useRouter();
   const [events, setEvents]       = useState<DetectionEvent[]>([]);
   const [loading, setLoading]     = useState(true);
   const [search, setSearch]       = useState("");
@@ -99,13 +102,14 @@ export default function LogsPage() {
   useEffect(() => { fetchEvents(); }, [fetchEvents]);
 
   // ── Register unknown person ───────────────────────────────────────────────
-  const handleMakeKnown = async (eventId: number) => {
+  const handleMakeKnown = async (eventId: number, imagePath: string) => {
     const name = window.prompt("Enter name for this person:");
     if (!name?.trim()) return;
     try {
-      await registerPersonFromEvent(eventId, name.trim());
+      await registerPersonFromEvent(eventId, name.trim(), imagePath);
       showToast(`Registered "${name.trim()}" successfully!`, "success");
       fetchEvents();
+      router.refresh();
     } catch (err: unknown) {
       showToast((err as Error).message || "Failed to register person.", "error");
     }
@@ -126,6 +130,20 @@ export default function LogsPage() {
     a.download = `visitor-logs-${Date.now()}.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  // ── Clear All Logs ────────────────────────────────────────────────────────
+  const handleClearAll = async () => {
+    if (!window.confirm("Are you sure you want to permanently delete all logs and snapshots? This action cannot be undone.")) return;
+    try {
+      setLoading(true);
+      await clearAllEvents();
+      showToast("All logs and snapshots have been cleared.", "success");
+      fetchEvents();
+    } catch (err: unknown) {
+      showToast((err as Error).message || "Failed to clear logs.", "error");
+      setLoading(false);
+    }
   };
 
   // ── Filtering ─────────────────────────────────────────────────────────────
@@ -195,6 +213,13 @@ export default function LogsPage() {
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleClearAll}
+              disabled={loading}
+              className="flex items-center gap-2 px-4 py-2 bg-red-50 border border-red-200 rounded-lg text-sm font-medium text-red-700 hover:bg-red-100 transition-colors disabled:opacity-50"
+            >
+              <Trash2 size={15} /> Clear All
+            </button>
             <button
               onClick={fetchEvents}
               disabled={loading}
@@ -417,7 +442,7 @@ export default function LogsPage() {
                       <td className="px-6 py-4 align-middle border-b border-slate-50">
                         {!isKnown && ev.buffer_status !== "added" && (
                           <button
-                            onClick={() => handleMakeKnown(ev.id)}
+                            onClick={() => handleMakeKnown(ev.id, ev.snapshot_path)}
                             className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium bg-indigo-50 hover:bg-indigo-100 text-indigo-700 rounded-lg border border-indigo-200 transition-colors"
                           >
                             <UserPlus size={12} /> Register

@@ -92,7 +92,7 @@ function FeedItem({ ev, animate }: { ev: DetectionEvent; animate: boolean }) {
           isKnown ? "bg-gradient-to-br from-indigo-100 to-indigo-50 text-indigo-700 border border-indigo-200" 
                   : "bg-gradient-to-br from-rose-100 to-rose-50 text-rose-700 border border-rose-200"
         }`}>
-          {ev.person_name.charAt(0).toUpperCase()}
+          {(ev.person_name || "?").charAt(0).toUpperCase()}
         </div>
         {/* Info */}
         <div className="min-w-0">

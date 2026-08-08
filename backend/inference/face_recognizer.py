@@ -3,6 +3,7 @@ import numpy as np
 from loguru import logger
 import insightface
 from insightface.app import FaceAnalysis
+import onnxruntime as ort
 
 class InsightFaceRecognizer:
     def __init__(self, models_dir: str):
@@ -10,7 +11,10 @@ class InsightFaceRecognizer:
         Initializes the InsightFace model using the buffalo_l pack.
         models_dir should point to the directory containing the 'models' folder.
         """
-        self.app = FaceAnalysis(name='buffalo_l', root=models_dir, providers=['CUDAExecutionProvider', 'CPUExecutionProvider'])
+        # Force CPU for InsightFace to bypass CoreML compiler I/O cache issues on macOS
+        providers = ['CPUExecutionProvider']
+        
+        self.app = FaceAnalysis(name='buffalo_l', root=models_dir, providers=providers)
         
         # Prepare the model with typical detection parameters
         try:

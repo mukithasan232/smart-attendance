@@ -62,7 +62,7 @@ def sigmoid(x):
     """
     return 1 / (1 + np.exp(-x))
 
-def draw_detections(image, boxes, scores, class_ids, mask_alpha=0.3, mask_maps=None, labels_override=None, colors_override=None):
+def draw_detections(image, boxes, scores, class_ids, mask_alpha=0.3, mask_maps=None, recognized_names=None, colors_override=None):
     """
     Draw bounding boxes and masks on the image
     """
@@ -111,8 +111,9 @@ def draw_detections(image, boxes, scores, class_ids, mask_alpha=0.3, mask_maps=N
         cv2.rectangle(img, (x1, y1), (x2, y2), color, 2)
         
         # Draw labels
-        if labels_override and i < len(labels_override) and labels_override[i] is not None:
-            label = f"{labels_override[i]} {int(scores[i]*100)}%"
+        if recognized_names and i < len(recognized_names) and recognized_names[i] is not None:
+            name = recognized_names[i]
+            label = f"{name} {int(scores[i]*100)}%"
         else:
             cid = int(class_ids[i])
             if cid >= 0 and cid < len(COCO_CLASSES):

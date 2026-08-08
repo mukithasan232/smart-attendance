@@ -1,6 +1,7 @@
 "use client";
 /* eslint-disable @next/next/no-img-element, react-hooks/set-state-in-effect */
 import { useEffect, useState, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { getPersons, deletePerson, uploadPerson, snapshotUrl, Person } from "@/lib/api";
 import { UserPlus, Trash2, User, Search, RefreshCw, AlertCircle, CheckCircle } from "lucide-react";
 import { Card } from "@/components/ui/Card";
@@ -10,6 +11,7 @@ import { PageWrapper } from "@/components/ui/PageWrapper";
 import AddPersonModal from "./AddPersonModal";
 
 export default function PersonsPage() {
+  const router = useRouter();
   const [persons, setPersons] = useState<Person[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
@@ -42,6 +44,7 @@ export default function PersonsPage() {
       await deletePerson(id);
       setPersons((prev) => prev.filter((p) => p.id !== id));
       showToast("Person removed from the system.", "success");
+      router.refresh();
     } catch (e: unknown) {
       showToast((e as Error).message || "An error occurred", "error");
     } finally {

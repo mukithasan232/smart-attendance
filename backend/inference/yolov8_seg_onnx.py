@@ -25,9 +25,15 @@ class YOLOv8Segmentation_onnx:
         self.ios_thres = ios_thres
         self.num_mask = num_mask
         
-        # Safe providers setup for cross-platform (Mac & Linux/GPU)
+        # Dynamic providers setup for cross-platform (Mac & Linux/GPU)
         available_providers = ort.get_available_providers()
-        providers = ['CUDAExecutionProvider' if 'CUDAExecutionProvider' in available_providers else 'CPUExecutionProvider']
+        import platform
+        providers = []
+        if platform.system() == "Darwin" and 'CoreMLExecutionProvider' in available_providers:
+            providers.append('CoreMLExecutionProvider')
+        if 'CUDAExecutionProvider' in available_providers:
+            providers.append('CUDAExecutionProvider')
+        providers.append('CPUExecutionProvider')
         
         self.session = ort.InferenceSession(path, providers=providers)
         self.get_input_details()
@@ -39,9 +45,9 @@ class YOLOv8Segmentation_onnx:
     def segment_objects(self, image):
         input_tensor = self.prepare_input(image)
         outputs = self.inference(input_tensor)
-        self.boxes, self.scores, self.class_ids, mask_pred = self.process_box_output(outputs[0])
-        self.mask_maps = self.process_mask_output(mask_pred, outputs[1])
-        return self.boxes, self.scores, self.class_ids
+        boxes, scores, class_ids, mask_pred = self.process_box_output(outputs[0])
+        mask_maps = self.process_mask_output(mask_pred, outputs[1], boxes)
+        return boxes, scores, class_ids, mask_maps
     
     def inference(self, input_tensor):
         start = time.time()
@@ -84,10 +90,24 @@ class YOLOv8Segmentation_onnx:
 
         class_ids = np.argmax(box_predictions[:, 4:], axis=1)
         boxes = self.extract_boxes(box_predictions)
+        
+        # Valid box filter (width > 20 and height > 20)
+        widths = boxes[:, 2] - boxes[:, 0]
+        heights = boxes[:, 3] - boxes[:, 1]
+        valid_mask = (widths >= 20) & (heights >= 20)
+        
+        boxes = boxes[valid_mask]
+        scores = scores[valid_mask]
+        class_ids = class_ids[valid_mask]
+        mask_predictions = mask_predictions[valid_mask]
+        
+        if len(scores) == 0:
+            return [], [], [], np.array([])
+            
         indices = nms(boxes, scores, self.ios_thres)
         return boxes[indices], scores[indices], class_ids[indices], mask_predictions[indices]
     
-    def process_mask_output(self, mask_predictions, mask_output):
+    def process_mask_output(self, mask_predictions, mask_output, boxes):
         if mask_predictions.shape[0] == 0:
             return []
         mask_output = np.squeeze(mask_output)
@@ -95,7 +115,7 @@ class YOLOv8Segmentation_onnx:
         num_mask, mask_height, mask_width = mask_output.shape
         masks = sigmoid(mask_predictions @ mask_output.reshape(num_mask, -1))
         masks = masks.reshape((-1, mask_height, mask_width))
-        scale_boxes = self.rescale_boxes(self.boxes,
+        scale_boxes = self.rescale_boxes(boxes,
                                        (self.img_height, self.img_width),
                                        (mask_height, mask_width))
         mask_maps = np.zeros((len(scale_boxes), self.img_height, self.img_width))
@@ -106,13 +126,13 @@ class YOLOv8Segmentation_onnx:
             scale_x2 = int(math.ceil(scale_boxes[i][2]))
             scale_y2 = int(math.ceil(scale_boxes[i][3]))
 
-            x1 = int(math.floor(self.boxes[i][0]))
-            y1 = int(math.floor(self.boxes[i][1]))
-            x2 = int(math.ceil(self.boxes[i][2]))
-            y2 = int(math.ceil(self.boxes[i][1]))
+            x1 = int(math.floor(boxes[i][0]))
+            y1 = int(math.floor(boxes[i][1]))
+            x2 = int(math.ceil(boxes[i][2]))
+            y2 = int(math.ceil(boxes[i][3]))
 
             scale_crop_mask = masks[i][scale_y1:scale_y2, scale_x1:scale_x2]
-            if scale_crop_mask.size == 0:
+            if scale_crop_mask.size == 0 or (x2-x1) <= 0 or (y2-y1) <= 0:
                 continue
             crop_mask = cv2.resize(scale_crop_mask,
                                    (x2-x1, y2-y1),
@@ -127,7 +147,10 @@ class YOLOv8Segmentation_onnx:
         boxes = self.rescale_boxes(boxes,
                                    (self.input_height, self.input_width),
                                    (self.img_height, self.img_width))
+        
+        # YOLOv8 standard ONNX outputs [cx, cy, w, h] so we must convert it
         boxes = xywh2xyxy(boxes)
+        
         boxes[:, 0] = np.clip(boxes[:, 0], 0, self.img_width)
         boxes[:, 1] = np.clip(boxes[:, 1], 0, self.img_height)
         boxes[:, 2] = np.clip(boxes[:, 2], 0, self.img_width)
@@ -145,10 +168,10 @@ class YOLOv8Segmentation_onnx:
         rescaled_boxes[:, 3] = boxes[:, 3] * scale_y
         return rescaled_boxes
     
-    def draw_detections(self, image, draw_scores=True, mask_alpha=0.4, labels_override=None, colors_override=None):
-        return draw_detections(image, self.boxes, self.scores, self.class_ids, mask_alpha, labels_override=labels_override, colors_override=colors_override)
+    def draw_detections(self, image, boxes, scores, class_ids, draw_scores=True, mask_alpha=0.4, recognized_names=None, colors_override=None):
+        return draw_detections(image, boxes, scores, class_ids, mask_alpha, recognized_names=recognized_names, colors_override=colors_override)
 
-    def draw_masks(self, image, draw_scores=True, mask_alpha=0.5, labels_override=None, colors_override=None):
-        if not hasattr(self, 'mask_maps') or len(self.mask_maps) == 0:
+    def draw_masks(self, image, boxes, scores, class_ids, mask_maps, draw_scores=True, mask_alpha=0.5, recognized_names=None, colors_override=None):
+        if mask_maps is None or len(mask_maps) == 0:
             return image
-        return draw_detections(image, self.boxes, self.scores, self.class_ids, mask_alpha, mask_maps=self.mask_maps, labels_override=labels_override, colors_override=colors_override)
+        return draw_detections(image, boxes, scores, class_ids, mask_alpha, mask_maps=mask_maps, recognized_names=recognized_names, colors_override=colors_override)

@@ -5,7 +5,8 @@
     "dev:all": "cd frontend && npm run dev:all"
   },
   "devDependencies": {
-    "concurrently": "^10.0.4"
+    "concurrently": "^10.0.4",
+    "prisma": "^7.9.1"
   },
   "dependencies": {
     "@vercel/analytics": "^2.0.1"

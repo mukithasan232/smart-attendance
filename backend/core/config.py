@@ -41,7 +41,7 @@ FACE_DETECT_THRESHOLD: float = float(os.getenv("FACE_DETECT_THRESHOLD", "0.5"))
 
 # ── Security / Alert Logic ──────────────────────────────────────────────────────
 # Cooldown period (seconds) between repeated alerts for the same unknown face
-UNKNOWN_COOLDOWN_SEC: int = int(os.getenv("UNKNOWN_COOLDOWN_SEC", "120"))  # 2 minutes
+UNKNOWN_ALERT_COOLDOWN: int = int(os.getenv("UNKNOWN_ALERT_COOLDOWN", "60"))  # 60 seconds
 
 # Automatically enroll unknown faces into the database instead of requiring manual approval
 AUTO_ENROLL_UNKNOWN_FACES: bool = os.getenv("AUTO_ENROLL_UNKNOWN_FACES", "False").lower() == "true"

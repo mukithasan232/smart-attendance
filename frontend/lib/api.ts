@@ -89,6 +89,9 @@ export const deletePerson = (id: number): Promise<{ message: string }> =>
 export const getEvents = (limit = 50): Promise<DetectionEvent[]> =>
   apiFetch<DetectionEvent[]>(`/api/events?limit=${limit}`);
 
+export const clearAllEvents = (): Promise<{ success: boolean; message: string; error?: string }> =>
+  apiFetch(`/api/events`, { method: "DELETE" });
+
 export async function uploadPerson(
   name: string,
   designation: string,
@@ -113,11 +116,12 @@ export async function uploadPerson(
 
 export const registerPersonFromEvent = (
   eventId: number,
-  name: string
-): Promise<{ message: string; person_id: number; event_id: number }> =>
-  apiFetch(`/api/events/${eventId}/register_person`, {
+  name: string,
+  imagePath: string
+): Promise<{ message: string; person_id: number }> =>
+  apiFetch(`/api/register-from-log`, {
     method: "POST",
-    body: JSON.stringify({ name }),
+    body: JSON.stringify({ log_id: eventId, name, image_path: imagePath }),
   });
 
 /** Build the URL for a snapshot served by the backend static files mount. */
