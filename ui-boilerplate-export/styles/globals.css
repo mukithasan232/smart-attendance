@@ -8,9 +8,9 @@
   --color-primary: hsl(217.2, 91.2%, 59.8%);
   --color-border: hsl(217.2, 32.6%, 17.5%);
 
-  /* Default brand colors */
-  --color-brand-primary:   rgb(139 92 246);
-  --color-brand-secondary: rgb(6 182 212);
+  /* Default brand colors for the boilerplate */
+  --color-brand-primary:   rgb(79 70 229); /* Indigo 600 */
+  --color-brand-secondary: rgb(6 182 212); /* Cyan 500 */
 }
 
 @layer base {

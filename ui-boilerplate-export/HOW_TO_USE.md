@@ -1,55 +1,46 @@
-# UI/UX Dashboard Boilerplate
+# UI/UX Boilerplate Export
 
-This boilerplate contains the pure UI/UX shell of the dashboard. It features a responsive sidebar, a top navigation bar, and a fully functional light/dark theme toggle, all stripped of any domain-specific business logic.
+This folder contains a clean, extracted version of the Dashboard layout and UI/UX components. All business logic, API calls, and domain-specific state have been removed.
 
-## 🚀 Setup Instructions
+## Setup Instructions
 
-1. **Install Dependencies**
-   Copy the dependencies from `dependencies.json` or run the following command in your new Next.js project:
+1. **Create a new Next.js project:**
    ```bash
-   npm install lucide-react next-themes
-   npm install -D tailwindcss @tailwindcss/postcss @tailwindcss/typography postcss
+   npx create-next-app@latest my-app
+   cd my-app
    ```
 
-2. **Copy Files**
-   - Copy the `components/` folder into your new project (e.g., `src/components/`).
-   - Copy `styles/globals.css` to your global styles location (e.g., `src/app/globals.css`).
-   - Copy `config/tailwind.config.ts` to your project root if you are using standard Tailwind config, or adjust accordingly if you are using Tailwind v4 inline `@theme`.
-
-3. **Wrap Your Application**
-   In your main `layout.tsx` (`src/app/layout.tsx`), set up the `ThemeProvider` and the `AppLayout`:
-
-   ```tsx
-   import type { Metadata } from 'next';
-   import '../styles/globals.css';
-   import { ThemeProvider } from '@/components/ThemeProvider';
-   import AppLayout from '@/components/layout';
-
-   export const metadata: Metadata = {
-     title: 'My App',
-     description: 'App description',
-   };
-
-   export default function RootLayout({
-     children,
-   }: Readonly<{
-     children: React.ReactNode;
-   }>) {
-     return (
-       <html lang="en" suppressHydrationWarning>
-         <body className="antialiased" suppressHydrationWarning>
-           <ThemeProvider attribute="class" defaultTheme="dark" enableSystem>
-             <AppLayout>
-               {children}
-             </AppLayout>
-           </ThemeProvider>
-         </body>
-       </html>
-     );
-   }
+2. **Install required dependencies:**
+   ```bash
+   npm install lucide-react next-themes clsx tailwind-merge
+   npm install -D tailwindcss @tailwindcss/typography
    ```
 
-4. **Customize Navigation**
-   - Open `components/Sidebar.tsx` and modify the `NAV_ITEM_DEFS` array to include your own routes and icons.
+3. **Copy the exported files:**
+   - Copy everything from `components/` to your project's `components/` folder (or `src/components/`).
+   - Copy `styles/globals.css` and replace your project's `app/globals.css` (or `src/app/globals.css`).
+   - Copy `config/tailwind.config.ts` to your project's root folder (if using Tailwind v3, otherwise it's just available for reference).
 
-Enjoy your beautiful UI shell!
+4. **Integrate the Layout:**
+   - In your `app/layout.tsx`, wrap the body content with the `ThemeProvider`:
+     ```tsx
+     import { ThemeProvider } from '@/components/ThemeProvider';
+     
+     // ...
+     
+     <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
+       {children}
+     </ThemeProvider>
+     ```
+   - In your Dashboard route layout (e.g., `app/(dashboard)/layout.tsx`), use the exported `DashboardLayout`:
+     ```tsx
+     import DashboardLayout from '@/components/layout';
+     
+     export default function Layout({ children }: { children: React.ReactNode }) {
+       return <DashboardLayout>{children}</DashboardLayout>;
+     }
+     ```
+
+5. **Customize:**
+   - Update the dummy links in `Sidebar.tsx` to match your application's routes.
+   - Customize the theme colors in `globals.css` or `tailwind.config.ts`.

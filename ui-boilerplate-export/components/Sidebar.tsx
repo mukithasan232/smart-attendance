@@ -2,14 +2,15 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, Settings, User, X, ChevronLeft, ChevronRight
+  LayoutDashboard, Users, Settings, X, ChevronLeft, ChevronRight, BarChart
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 
-const NAV_ITEM_DEFS = [
-  { key: 'dashboard', href: '/dashboard', icon: LayoutDashboard, label: 'Dashboard' },
-  { key: 'profile', href: '/profile', icon: User, label: 'Profile' },
-  { key: 'settings', href: '/settings', icon: Settings, label: 'Settings' },
+const NAV_ITEMS = [
+  { key: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { key: 'analytics', label: 'Analytics', href: '/analytics', icon: BarChart },
+  { key: 'users', label: 'Users', href: '/users', icon: Users },
+  { key: 'settings', label: 'Settings', href: '/settings', icon: Settings },
 ];
 
 interface SidebarProps {
@@ -48,12 +49,12 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       <div className={`h-16 w-full flex-shrink-0 flex items-center ${collapsed ? 'justify-center' : 'justify-start'} overflow-hidden border-b border-slate-200 dark:border-white/10 px-5 transition-all`}>
         <div className="flex items-center gap-2.5 min-w-0 overflow-hidden h-full w-full">
           {collapsed ? (
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white font-extrabold text-lg shadow-md flex-shrink-0">
-              A
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-extrabold text-lg shadow-md flex-shrink-0">
+              B
             </div>
           ) : (
-            <span className="text-slate-800 dark:text-white font-extrabold text-lg sm:text-xl tracking-widest block py-1 sm:py-2 text-center leading-tight truncate w-full flex items-center overflow-hidden">
-              MY APP
+            <span className="text-slate-800 dark:text-white font-extrabold text-lg sm:text-2xl tracking-widest block py-1 sm:py-2 text-left leading-tight truncate w-full h-8 flex items-center overflow-hidden">
+              BOILERPLATE
             </span>
           )}
         </div>
@@ -69,25 +70,21 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
       {/* Nav Items Container */}
       <div className="flex-1 overflow-y-auto w-full">
         <nav className="px-3 mt-4 space-y-1">
-          {NAV_ITEM_DEFS.map(item => {
-            const basePath = item.href.split('?')[0];
-            const isActive = pathname === basePath || (basePath !== '/' && (pathname?.startsWith(basePath) ?? false));
+          {NAV_ITEMS.map(item => {
+            const isActive = pathname === item.href || (item.href !== '/' && (pathname?.startsWith(item.href) ?? false));
             const Icon = item.icon;
             return (
               <Link
-                prefetch={false}
                 key={item.key}
                 href={item.href}
                 onClick={onClose}
-                className={`flex items-center gap-3 py-2.5 rounded-xl transition-all text-sm font-medium group relative ${
-                    isActive
+                className={`flex items-center gap-3 py-2.5 rounded-xl transition-all text-sm font-medium group relative ${isActive
                     ? 'bg-indigo-500/10 text-indigo-600 dark:text-white border border-indigo-500/20 shadow-sm shadow-indigo-500/20'
                     : 'text-slate-600 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
                   } ${collapsed ? 'justify-center px-0 mx-2' : 'px-4'}`}
               >
                 <Icon
-                  className={`h-5 w-5 flex-shrink-0 transition-colors ${
-                      isActive ? 'text-indigo-600 dark:text-white' : 'text-slate-400 dark:text-gray-400 group-hover:text-slate-900 dark:group-hover:text-white'
+                  className={`h-5 w-5 flex-shrink-0 transition-colors ${isActive ? 'text-indigo-600 dark:text-white' : 'text-slate-400 dark:text-gray-400 group-hover:text-slate-900 dark:group-hover:text-white'
                     }`}
                 />
                 {!collapsed && <span className="capitalize">{item.label}</span>}
@@ -129,7 +126,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         <div className="flex flex-col h-full animate-pulse p-4 space-y-4">
           <div className="h-8 bg-slate-200 dark:bg-slate-800 rounded w-1/2 mb-8" />
           <div className="space-y-3">
-            {[1, 2, 3].map((i) => (
+            {[1, 2, 3, 4].map((i) => (
               <div key={i} className="h-10 bg-slate-200 dark:bg-slate-800 rounded w-full" />
             ))}
           </div>

@@ -1,11 +1,65 @@
-/*
-  globals.css — SecureVision AI Enterprise UI
-  Clean, high-contrast, professional SaaS dashboard.
-*/
-
 @import "tailwindcss";
 
-/* ── Google Font: Inter ──────────────────────────────────────────────────── */
+@variant dark (&:where(.dark, .dark *));
+
+@theme inline {
+  --color-background: hsl(222.2, 84%, 4.9%);
+  --color-foreground: hsl(210, 40%, 98%);
+  --color-primary: hsl(217.2, 91.2%, 59.8%);
+  --color-border: hsl(217.2, 32.6%, 17.5%);
+
+  /* Default brand colors for the boilerplate */
+  --color-brand-primary:   rgb(79 70 229); /* Indigo 600 */
+  --color-brand-secondary: rgb(6 182 212); /* Cyan 500 */
+}
+
+@layer base {
+  body {
+    background-color: #f8fafc;
+    color: #0f172a;
+    min-height: 100vh;
+    font-family: Arial, Helvetica, sans-serif;
+    transition: background-color 0.3s ease, color 0.3s ease;
+  }
+}
+
+.dark body {
+  background-color: #090a0f;
+  background-image: radial-gradient(ellipse at top, #1b2735 0%, #090a0f 100%);
+  color: #f8fafc;
+}
+
+@layer components {
+  /* Select dropdowns in dark mode */
+  .dark select option,
+  .dark select {
+    background-color: #1E293B;
+    color: #f8fafc;
+  }
+  
+  .dark select:focus {
+    border-color: rgba(75, 85, 99, 0.5); /* gray-700/50 */
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
+  }
+
+  /* Scrollbars */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #cbd5e1;
+    border-radius: 4px;
+  }
+  .dark ::-webkit-scrollbar-thumb {
+    background: #475569;
+  }
+}
+
+/* --- Restored Legacy Variables --- */
 :root {
   /* Enterprise Light Mode Colors */
   --bg-base:        #f1f5f9; /* Slate 100 */
@@ -37,176 +91,7 @@
   --shadow-glow-red: 0 4px 12px rgba(220, 38, 38, 0.15);
 }
 
-/* ── Reset / Base ────────────────────────────────────────────────────────── */
-*, *::before, *::after {
-  box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
-
-html { scroll-behavior: smooth; }
-
-body {
-  font-family: var(--font-inter), "Inter", system-ui, sans-serif;
-  background-color: var(--bg-base);
-  color: var(--text-primary);
-  line-height: 1.6;
-  -webkit-font-smoothing: antialiased;
-  min-height: 100vh;
-}
-
-/* ── Scrollbar ───────────────────────────────────────────────────────────── */
-::-webkit-scrollbar { width: 8px; height: 8px; }
-::-webkit-scrollbar-track { background: var(--bg-base); }
-::-webkit-scrollbar-thumb {
-  background: var(--border-bright);
-  border-radius: 99px;
-}
-::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
-
-/* ── Page shell ──────────────────────────────────────────────────────────── */
-.app-body { 
-  background: var(--bg-base); 
-  min-height: 100vh; 
-  width: 100vw;
-  overflow-x: hidden;
-  display: flex; 
-}
-
-.page-root {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-  width: 100%;
-}
-
-/* ── Sidebar & Navigation ────────────────────────────────────────────────── */
-.sidebar {
-  width: 260px;
-  background: var(--bg-surface);
-  border-right: 1px solid var(--border);
-  display: flex;
-  flex-direction: column;
-  height: 100vh;
-  position: sticky;
-  top: 0;
-  z-index: 40;
-}
-
-@media (max-width: 768px) {
-  .sidebar {
-    display: none;
-  }
-}
-
-.sidebar-header {
-  padding: 20px 24px;
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  border-bottom: 1px solid var(--border);
-}
-
-.brand-icon {
-  width: 32px;
-  height: 32px;
-  border-radius: 8px;
-  background: var(--accent-indigo);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  flex-shrink: 0;
-}
-
-.brand-name {
-  font-size: 16px;
-  font-weight: 700;
-  color: var(--text-primary);
-  letter-spacing: -0.3px;
-}
-
-.sidebar-nav {
-  padding: 24px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.nav-link {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--text-secondary);
-  text-decoration: none;
-  transition: all 0.15s;
-}
-.nav-link:hover {
-  background: var(--bg-base);
-  color: var(--text-primary);
-}
-
-.nav-active {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 10px 14px;
-  border-radius: var(--radius-md);
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--accent-indigo);
-  background: rgba(79, 70, 229, 0.08);
-}
-
-/* ── Top Navbar ──────────────────────────────────────────────────────────── */
-.top-nav {
-  height: 64px;
-  background: var(--bg-surface);
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 32px;
-  position: sticky;
-  top: 0;
-  z-index: 30;
-}
-
-.top-nav-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: var(--text-primary);
-}
-
-.top-nav-actions {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.user-profile {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: var(--accent-indigo);
-  color: white;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  font-size: 14px;
-}
-
+/* --- Restored Legacy Components --- */
 /* ── Analytics Cards ─────────────────────────────────────────────────────── */
 .analytics-grid {
   display: grid;
@@ -749,7 +634,7 @@ body {
 }
 
 /* ── Utility ──────────────────────────────────────────────────────────────── */
-.hidden { display: none; }
+/* .hidden removed to fix Tailwind md:flex */
 .animate-spin { animation: spin 1s linear infinite; }
 @keyframes spin {
   from { transform: rotate(0deg); }
@@ -1249,3 +1134,38 @@ input:checked + .toggle-slider:before { transform: translateX(24px); }
 .camera-meta h4 { font-size: 14px; font-weight: 600; color: var(--text-primary); }
 .camera-meta p { font-size: 12px; color: var(--text-muted); }
 .camera-actions { display: flex; align-items: center; gap: 16px; }
+
+/* --- Dark Mode Legacy Patch --- */
+.dark {
+  --bg-base:        #090a0f;
+  --bg-surface:     #111827;
+  --bg-card:        #1f2937;
+  --bg-card-hover:  #374151;
+  --border:         #374151;
+  --border-bright:  #4b5563;
+  --text-primary:   #f9fafb;
+  --text-secondary: #d1d5db;
+  --text-muted:     #9ca3af;
+}
+
+/* Force dark colors on legacy Tailwind classes */
+.dark .bg-white { background-color: var(--bg-card) !important; }
+.dark .bg-slate-50 { background-color: var(--bg-base) !important; }
+.dark .bg-slate-100 { background-color: rgba(255, 255, 255, 0.05) !important; }
+
+.dark .text-slate-900, .dark .text-slate-800 { color: var(--text-primary) !important; }
+.dark .text-slate-700 { color: var(--text-secondary) !important; }
+.dark .text-slate-500, .dark .text-slate-400 { color: var(--text-muted) !important; }
+
+.dark .border-slate-100, .dark .border-slate-200 { border-color: var(--border) !important; }
+
+/* Fix text inputs */
+.dark input[type="text"], .dark input[type="email"], .dark input[type="password"],
+.dark input[type="number"], .dark .form-input, .dark select {
+  background-color: var(--bg-surface) !important;
+  color: var(--text-primary) !important;
+  border-color: var(--border-bright) !important;
+}
+.dark input:focus, .dark select:focus {
+  border-color: var(--accent-indigo) !important;
+}
