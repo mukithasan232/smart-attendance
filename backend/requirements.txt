@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+supabase
+opencv-python
+numpy
+python-dotenv
+tensorrt
+pycuda

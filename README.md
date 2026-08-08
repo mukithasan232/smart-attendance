@@ -8,24 +8,27 @@
 
 ## 🌟 Overview
 
-The **Smart Face Recognition Attendance System** is an end-to-end security and attendance tracking application. It connects to an RTSP IP camera (or webcam), processes frames locally using state-of-the-art AI (InsightFace), logs recognition events to an SQLite database, and serves a beautiful, real-time dashboard built with Next.js and Tailwind CSS. 
+The **Smart Face Recognition & Segmentation System** is an end-to-end Computer Vision application. It connects to a camera stream, processes frames locally using state-of-the-art AI (YOLOv8 Segmentation & InsightFace), and serves a real-time MJPEG video feed via a FastAPI backend.
 
-Unrecognized individuals trigger instant Telegram alerts with actionable buttons to seamlessly onboard them into the system.
+---
+
+## 📸 Inference Output
+*(Save your screenshot as `output.jpg` in the root folder to display it here)*
+
+![Inference Output 1](./output.jpg)
+![Inference Output 2](./output-2.jpg)
 
 ---
 
 ## ✨ Key Features
 
-- 🎥 **Live Stream & Detection**: Supports RTSP IP cameras and built-in webcams with real-time bounding boxes and identification overlays.
-- 🧠 **Advanced AI Vision**: Powered by InsightFace `buffalo_l` (512-D embeddings) for highly accurate face recognition.
-- 🎯 **YOLOv8 Pre-filtering**: Uses YOLOv8 to quickly detect persons before running heavy face recognition models, significantly saving CPU/GPU cycles.
-- 🏎️ **Hardware Acceleration**: Automatic TensorRT `.engine` export and execution on NVIDIA GPUs, with MPS fallback for Apple Silicon and CoreML ONNX providers.
-- ⚡ **Zero-Latency Architecture**: In-memory embedding caching and asynchronous background tasks for DB/Telegram ensure the live feed never drops frames.
-- 🤖 **Auto-Enrollment (Optional)**: Automatically enrolls and learns unknown faces with built-in cooldown logic to prevent duplicates.
-- 💻 **Modern Web Dashboard**: A Next.js frontend to view the live camera feed, browse event logs, and manage registered persons.
-- 📱 **Telegram Bot Integration**: Instantly sends snapshots of "Unknown" faces to an admin chat with 1-tap `[Add as Known]` or `[Ignore]` controls.
-- 🛡️ **Quality & Blur Filtering**: Advanced Laplacian variance and bounding box size filtering ensures only clear, high-quality faces are logged and alerted.
-- 🗄️ **Local SQLite Database**: Lightning-fast async database operations via `aiosqlite`.
+- 🎥 **Live Stream & Detection**: Supports webcams and RTSP streams with real-time bounding boxes, class labels, and segmentation masks.
+- 🎯 **YOLOv8 ONNX Segmentation**: Runs Ultralytics YOLOv8n-seg exported to ONNX format for blazing fast, cross-platform instance segmentation.
+- 🧠 **Advanced AI Vision**: Built-in support for InsightFace `buffalo_l` embeddings for face recognition.
+- 🏎️ **Hardware Acceleration**: Automatic fallback between CUDA (NVIDIA GPUs) and CPU providers via `onnxruntime`.
+- ⚡ **FastAPI Streaming**: Streams processed frames via MJPEG using a highly concurrent, zero-latency generator.
+- 💻 **Modern Web Dashboard**: A Next.js frontend to view the live camera feed and manage the system.
+- 🗄️ **Local SQLite Database**: Async database operations via `aiosqlite`.
 
 ---
 
@@ -34,7 +37,7 @@ Unrecognized individuals trigger instant Telegram alerts with actionable buttons
 ### Backend
 * **Language:** Python 3.10+
 * **Framework:** FastAPI & Asyncio
-* **AI/CV:** InsightFace, YOLOv8 (Ultralytics), TensorRT, OpenCV, ONNX Runtime
+* **AI/CV:** YOLOv8-seg (ONNX Runtime), InsightFace, OpenCV, NumPy
 * **Database:** aiosqlite (SQLite)
 * **Messaging:** aiogram (Telegram Bot)
 
@@ -49,17 +52,18 @@ Unrecognized individuals trigger instant Telegram alerts with actionable buttons
 
 ```text
 smart-attendance/
-├── main.py              # FastAPI entry point & core processing loop
-├── camera.py            # RTSP camera stream handling & MJPEG generation
-├── vision.py            # InsightFace AI engine & embedding matching
-├── database.py          # Async SQLite CRUD operations
-├── bot.py               # Telegram bot logic & webhook handling
-├── config.py            # Centralised configuration loader
+├── backend/             # FastAPI backend application
+│   ├── api/             # API routes and main entry points
+│   ├── core/            # Configuration and database logic
+│   ├── inference/       # Vision AI, YOLOv8, InsightFace models
+│   ├── utils/           # Helper scripts (camera, notify, bot)
+│   └── main.py          # Refactored FastAPI entry point
+├── models/              # Local cache for AI models
+├── snapshots/           # Local storage for captured face images
+├── supabase/            # Supabase migrations and configurations
+├── migrate_db.py        # Database migration script
 ├── package.json         # Root scripts (e.g., dev:all)
 ├── .env                 # Backend configuration secrets
-├── models/              # Local cache for InsightFace models (~400 MB)
-├── snapshots/           # Local storage for captured face images
-├── security.db          # SQLite Database
 │
 └── frontend/            # Next.js Web Dashboard
     ├── app/             # Next.js App Router pages (Events, Persons, Settings)

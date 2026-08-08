@@ -4,7 +4,7 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "dev:all": "concurrently -n \"FRONTEND,BACKEND\" -c \"green,blue\" \"npm run dev\" \"cd .. && source venv/bin/activate && python main.py\"",
+    "dev:all": "concurrently -n \"FRONTEND,BACKEND\" -c \"green,blue\" \"npm run dev\" \"cd .. && source venv/bin/activate && uvicorn backend.main:app --reload\"",
     "build": "next build",
     "start": "next start",
     "lint": "eslint"
