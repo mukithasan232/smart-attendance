@@ -8,8 +8,9 @@ export default function PricingPage() {
   const [isYearly, setIsYearly] = useState(false);
 
   return (
-    <div className="page-root">
-      <div className="main-content">
+    <div className="page-root relative bg-[url('/auth-bg-new.png')] bg-cover bg-center bg-fixed">
+      <div className="absolute inset-0 bg-slate-950/70 z-0"></div>
+      <div className="main-content relative z-10">
         <div className="pricing-header">
           <h1 className="pricing-title">Simple, transparent pricing</h1>
           <p className="pricing-subtitle">

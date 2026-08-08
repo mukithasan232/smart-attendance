@@ -38,7 +38,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 relative bg-[url('/auth-banner.png')] bg-cover bg-center">
+    <div className="min-h-screen w-full flex items-center justify-center p-4 relative bg-[url('/auth-bg-new.png')] bg-cover bg-center">
       <div className="absolute inset-0 bg-slate-950/40 z-0"></div>
 
       <div className="w-full max-w-[420px] p-8 sm:p-10 rounded-2xl bg-white/5 backdrop-blur-xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] relative z-10">

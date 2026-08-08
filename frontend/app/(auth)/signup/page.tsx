@@ -139,7 +139,7 @@ export default function SignupPage() {
       {/* Right Banner Section */}
       <div className="hidden lg:flex items-center justify-center relative bg-slate-900 w-full h-full overflow-hidden">
         <Image 
-          src="/auth-banner.png" 
+          src="/auth-bg-new.png" 
           alt="SecureVision Dashboard" 
           fill
           className="object-cover" 
