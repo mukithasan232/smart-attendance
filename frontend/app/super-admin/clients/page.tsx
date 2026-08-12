@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Search, Users as UsersIcon, CheckCircle2, XCircle, MoreVertical, Edit2, Trash2, Loader2, Shield } from 'lucide-react';
+import { Search, Users as UsersIcon, CheckCircle2, XCircle, MoreVertical, Edit2, Trash2, Loader2, Shield, Mail } from 'lucide-react';
 import { useAuth } from '@/components/providers/AuthContext';
 import { createPortal } from 'react-dom';
 
@@ -145,6 +145,24 @@ export default function UsersManagementPage() {
     }
   };
 
+  const handleResendVerification = async (email: string) => {
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Verification email resent', 'success');
+      } else {
+        showToast(data.error || 'Failed to resend email', 'error');
+      }
+    } catch (err) {
+      showToast('Error resending email', 'error');
+    }
+  };
+
   const filteredUsers = users.filter(u => u.email.toLowerCase().includes(search.toLowerCase()));
 
   if (!role || (role !== 'ADMIN' && role !== 'SUPER_ADMIN')) {
@@ -225,9 +243,18 @@ export default function UsersManagementPage() {
                             <CheckCircle2 size={14} /> Verified
                           </span>
                         ) : (
-                          <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold border border-slate-200">
-                            <XCircle size={14} /> Unverified
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-100 text-slate-600 text-xs font-semibold border border-slate-200">
+                              <XCircle size={14} /> Unverified
+                            </span>
+                            <button
+                              onClick={() => handleResendVerification(user.email)}
+                              className="text-xs text-indigo-600 hover:text-indigo-700 font-medium hover:underline flex items-center gap-1"
+                              title="Resend verification email"
+                            >
+                              <Mail size={12} /> Resend
+                            </button>
+                          </div>
                         )}
                       </div>
                     </td>

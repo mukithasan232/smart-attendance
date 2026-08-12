@@ -2,7 +2,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, Users, Settings, X, ChevronLeft, ChevronRight, Video, List, LogOut, ShieldAlert, Plug
+  LayoutDashboard, Users, Settings, X, ChevronLeft, ChevronRight, Video, List, LogOut, ShieldAlert, Plug, CreditCard
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/components/providers/AuthContext';
@@ -23,6 +23,7 @@ const NAV_SECTIONS = [
     items: [
       { key: 'cameras', label: 'Camera Feeds', href: '/settings/cameras', icon: Video },
       { key: 'integrations', label: 'Telegram & Alerts', href: '/settings/integrations', icon: Plug },
+      { key: 'billing', label: 'Billing & Subscription', href: '/billing', icon: CreditCard },
       { key: 'account', label: 'Account & Security', href: '/settings/account', icon: ShieldAlert },
     ]
   }

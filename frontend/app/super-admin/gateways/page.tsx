@@ -45,7 +45,7 @@ export default function GatewaysAdminPage() {
   const handleEdit = (g: Gateway) => {
     setProviderName(g.providerName);
     setApiKey(g.apiKey);
-    setSecretKey(''); // Force them to re-enter if they want to update
+    setSecretKey(g.providerName === 'Manual' ? 'manual-secret' : ''); // Force them to re-enter if they want to update, except manual
     setWebhookSecret('');
     setIsActive(g.isActive);
   };
@@ -59,7 +59,7 @@ export default function GatewaysAdminPage() {
       const payload = {
         providerName,
         apiKey,
-        secretKey,
+        secretKey: providerName === 'Manual' ? 'manual-secret' : secretKey,
         webhookSecret,
         isActive
       };
@@ -121,37 +121,53 @@ export default function GatewaysAdminPage() {
                 <option value="Razorpay">Razorpay</option>
                 <option value="PayPal">PayPal</option>
                 <option value="SSLCommerz">SSLCommerz</option>
+                <option value="Manual">Manual (Bank/bKash/Nagad)</option>
               </select>
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Public API Key</label>
-              <input 
-                type="text" required
-                value={apiKey} onChange={e => setApiKey(e.target.value)}
-                className="mt-1 w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-sm focus:border-black dark:focus:border-white focus:ring-1 outline-none"
-              />
+              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                {providerName === 'Manual' ? 'Payment Instructions' : 'Public API Key'}
+              </label>
+              {providerName === 'Manual' ? (
+                <textarea 
+                  required
+                  value={apiKey} onChange={e => setApiKey(e.target.value)}
+                  placeholder="e.g. Send money to bKash 017XXXXXX and provide Transaction ID below."
+                  className="mt-1 w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-sm focus:border-black dark:focus:border-white focus:ring-1 outline-none h-24 resize-none"
+                />
+              ) : (
+                <input 
+                  type="text" required
+                  value={apiKey} onChange={e => setApiKey(e.target.value)}
+                  className="mt-1 w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-sm focus:border-black dark:focus:border-white focus:ring-1 outline-none"
+                />
+              )}
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Secret Key</label>
-              <input 
-                type="password" required
-                value={secretKey} onChange={e => setSecretKey(e.target.value)}
-                placeholder="Required for saving"
-                className="mt-1 w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-sm focus:border-black dark:focus:border-white focus:ring-1 outline-none"
-              />
-            </div>
+            {providerName !== 'Manual' && (
+              <>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Secret Key</label>
+                  <input 
+                    type="password" required
+                    value={secretKey} onChange={e => setSecretKey(e.target.value)}
+                    placeholder="Required for saving"
+                    className="mt-1 w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-sm focus:border-black dark:focus:border-white focus:ring-1 outline-none"
+                  />
+                </div>
 
-            <div>
-              <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Webhook Secret (Optional)</label>
-              <input 
-                type="password" 
-                value={webhookSecret} onChange={e => setWebhookSecret(e.target.value)}
-                placeholder="For verifying webhooks"
-                className="mt-1 w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-sm focus:border-black dark:focus:border-white focus:ring-1 outline-none"
-              />
-            </div>
+                <div>
+                  <label className="block text-sm font-medium text-zinc-700 dark:text-zinc-300">Webhook Secret (Optional)</label>
+                  <input 
+                    type="password" 
+                    value={webhookSecret} onChange={e => setWebhookSecret(e.target.value)}
+                    placeholder="For verifying webhooks"
+                    className="mt-1 w-full rounded-md border border-zinc-300 dark:border-zinc-700 bg-transparent px-3 py-2 text-sm focus:border-black dark:focus:border-white focus:ring-1 outline-none"
+                  />
+                </div>
+              </>
+            )}
 
             <div className="flex items-center gap-2">
               <input 

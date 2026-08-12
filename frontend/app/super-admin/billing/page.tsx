@@ -110,6 +110,24 @@ export default function AdminBillingPage() {
     }
   };
 
+  const handleApprove = async (id: string) => {
+    if (!confirm('Are you sure you want to approve this bill?')) return;
+    try {
+      const res = await fetch(`/api/admin/billing/${id}/approve`, {
+        method: 'POST'
+      });
+      if (res.ok) {
+        showToast('Bill approved successfully', 'success');
+        fetchData();
+      } else {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to approve bill');
+      }
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    }
+  };
+
   const filteredBills = bills.filter(b => 
     b.user.email.toLowerCase().includes(search.toLowerCase()) ||
     b.id.toLowerCase().includes(search.toLowerCase()) ||
@@ -223,7 +241,17 @@ export default function AdminBillingPage() {
                       {getStatusBadge(bill.status)}
                     </td>
                     <td className="p-5 text-right pr-6 text-sm text-slate-500">
-                      {new Date(bill.createdAt).toLocaleDateString()}
+                      <div className="flex items-center justify-end gap-3">
+                        <span>{new Date(bill.createdAt).toLocaleDateString()}</span>
+                        {bill.status === 'PENDING' && (
+                          <button
+                            onClick={() => handleApprove(bill.id)}
+                            className="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-semibold py-1 px-3 rounded-lg transition-colors border border-indigo-200"
+                          >
+                            Approve
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}

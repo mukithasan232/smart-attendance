@@ -11,6 +11,8 @@ function LoginContent() {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [showResend, setShowResend] = useState(false);
+  const [isResending, setIsResending] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const { branding } = useBranding();
@@ -58,12 +60,39 @@ function LoginContent() {
         }
       } else {
         setToast({ message: data.error || 'Invalid credentials. Please try again.', type: 'error' });
+        if (data.error && data.error.toLowerCase().includes('verify')) {
+          setShowResend(true);
+        } else {
+          setShowResend(false);
+        }
       }
     } catch {
       setToast({ message: 'Error logging in.', type: 'error' });
     } finally {
       setIsLoading(false);
       setTimeout(() => setToast(null), 3000);
+    }
+  };
+
+  const handleResend = async () => {
+    setIsResending(true);
+    try {
+      const res = await fetch('/api/auth/resend-verification', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email })
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setToast({ message: 'Verification email resent! Please check your inbox.', type: 'success' });
+        setShowResend(false);
+      } else {
+        setToast({ message: data.error || 'Failed to resend email.', type: 'error' });
+      }
+    } catch {
+      setToast({ message: 'An error occurred.', type: 'error' });
+    } finally {
+      setIsResending(false);
     }
   };
 
@@ -123,6 +152,17 @@ function LoginContent() {
             >
               {isLoading ? <Loader2 size={18} className="animate-spin" /> : 'Sign In'}
             </button>
+            
+            {showResend && (
+              <button
+                type="button"
+                onClick={handleResend}
+                disabled={isResending}
+                className="w-full py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold rounded-xl transition-all flex items-center justify-center gap-2 mt-2"
+              >
+                {isResending ? <Loader2 size={18} className="animate-spin" /> : 'Resend Verification Email'}
+              </button>
+            )}
           </form>
 
           <div className="text-center mt-8">
