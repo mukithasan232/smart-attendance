@@ -233,7 +233,7 @@ export default function IntegrationsPage() {
                 {gateways.length === 0 ? (
                   <div className="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-xl">
                     <CreditCard className="mx-auto text-gray-400 mb-3" size={32} />
-                    <p className="text-gray-500">No payment gateways configured.</p>
+                    <p className="text-lg font-medium text-gray-500">No records found. Click here to add one.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -275,7 +275,7 @@ export default function IntegrationsPage() {
                 {cameras.length === 0 ? (
                   <div className="text-center py-12 border-2 border-dashed border-gray-200 dark:border-gray-800 rounded-xl">
                     <Video className="mx-auto text-gray-400 mb-3" size={32} />
-                    <p className="text-gray-500">No cameras configured.</p>
+                    <p className="text-lg font-medium text-gray-500">No records found. Click here to add one.</p>
                   </div>
                 ) : (
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

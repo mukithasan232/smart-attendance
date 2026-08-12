@@ -10,7 +10,7 @@ async function checkAdmin() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return false;
   const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
-  return dbUser?.role === 'ADMIN';
+  return dbUser?.role === 'ADMIN' || dbUser?.role === 'SUPER_ADMIN';
 }
 
 export async function PATCH(request: Request, { params }: { params: Promise<{ id: string }> }) {

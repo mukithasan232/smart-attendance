@@ -123,7 +123,7 @@ export default function TeamManagementPage() {
         ) : admins.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-64 text-slate-500">
             <Shield size={48} className="text-slate-300 mb-4" />
-            <p>No admins found.</p>
+            <p className="text-lg font-medium">No records found. Click here to add one.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">

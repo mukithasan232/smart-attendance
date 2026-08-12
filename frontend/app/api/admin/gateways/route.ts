@@ -16,7 +16,7 @@ async function checkAdmin() {
     where: { id: user.id }
   });
 
-  return dbUser?.role === 'ADMIN';
+  return dbUser?.role === 'ADMIN' || dbUser?.role === 'SUPER_ADMIN';
 }
 
 export async function GET() {
