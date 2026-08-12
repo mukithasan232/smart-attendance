@@ -5,6 +5,7 @@ import {
   LayoutDashboard, Building, CreditCard, Receipt, Activity, X, ChevronLeft, ChevronRight, LogOut, ShieldAlert
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
+import { useBranding } from '@/components/providers/BrandingContext';
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', href: '/super-admin/dashboard', icon: LayoutDashboard },
@@ -51,6 +52,7 @@ export default function SuperAdminSidebar({ mobileOpen, onClose }: SidebarProps)
   };
 
   const collapsed = !mobileOpen && isCollapsed;
+  const { branding } = useBranding();
 
   const SidebarContent = () => (
     <div className="flex flex-col h-full overflow-hidden">
@@ -58,17 +60,17 @@ export default function SuperAdminSidebar({ mobileOpen, onClose }: SidebarProps)
       <div className={`h-16 w-full flex-shrink-0 flex items-center ${collapsed ? 'justify-center' : 'justify-start'} overflow-hidden border-b border-slate-200 dark:border-white/10 px-5 transition-all`}>
         <div className="flex items-center gap-2.5 min-w-0 overflow-hidden h-full w-full">
           {collapsed ? (
-            <div className="w-8 h-8 rounded-lg bg-indigo-900 flex items-center justify-center text-indigo-400 font-extrabold text-lg shadow-md flex-shrink-0 border border-indigo-700/50">
-              <ShieldAlert size={18} />
+            <div className="w-8 h-8 rounded-lg bg-indigo-900 flex items-center justify-center text-indigo-400 font-extrabold text-lg shadow-md flex-shrink-0 border border-indigo-700/50" style={{ backgroundColor: 'var(--accent-indigo)' }}>
+              {branding.logoUrl ? <img src={branding.logoUrl} alt="Logo" className="w-6 h-6 object-contain" /> : <ShieldAlert size={18} />}
             </div>
           ) : (
             <>
-              <div className="w-8 h-8 rounded-lg bg-indigo-900 flex items-center justify-center text-indigo-400 font-extrabold text-lg shadow-md flex-shrink-0 border border-indigo-700/50">
-                <ShieldAlert size={18} />
+              <div className="w-8 h-8 rounded-lg bg-indigo-900 flex items-center justify-center text-indigo-400 font-extrabold text-lg shadow-md flex-shrink-0 border border-indigo-700/50" style={{ backgroundColor: 'var(--accent-indigo)' }}>
+                {branding.logoUrl ? <img src={branding.logoUrl} alt="Logo" className="w-6 h-6 object-contain" /> : <ShieldAlert size={18} />}
               </div>
               <span className="text-slate-800 dark:text-white font-extrabold text-[15px] sm:text-base tracking-tight block py-1 sm:py-2 text-left leading-tight truncate w-full flex flex-col items-start justify-center overflow-hidden">
-                <span>SecureVision</span>
-                <span className="text-[10px] uppercase text-indigo-500 tracking-wider">Super Admin</span>
+                <span>{branding.appName}</span>
+                <span className="text-[10px] uppercase tracking-wider" style={{ color: 'var(--accent-indigo)' }}>{branding.tagline}</span>
               </span>
             </>
           )}

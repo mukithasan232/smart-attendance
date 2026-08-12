@@ -159,6 +159,24 @@ export const saveNotificationSettings = (settings: SmtpSettings): Promise<{ mess
 export const testEmailConnection = (): Promise<{ success: boolean; message: string }> =>
   apiFetch("/api/settings/notifications/test", { method: "POST" });
 
+// ── Branding Settings ────────────────────────────────────────────────────────
+export interface BrandingSettings {
+  appName: string;
+  tagline: string;
+  logoUrl: string;
+  faviconUrl: string;
+  primaryColor: string;
+}
+
+export const getBrandingSettings = (): Promise<{ branding: BrandingSettings }> =>
+  apiFetch<{ branding: BrandingSettings }>("/api/settings/branding");
+
+export const saveBrandingSettings = (settings: BrandingSettings): Promise<{ message: string }> =>
+  apiFetch("/api/settings/branding", {
+    method: "POST",
+    body: JSON.stringify(settings),
+  });
+
 // ── Camera Settings ────────────────────────────────────────────────────────────
 
 export interface CameraConfig {

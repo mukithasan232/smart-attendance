@@ -6,6 +6,7 @@ import {
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/components/providers/AuthContext';
+import { useBranding } from '@/components/providers/BrandingContext';
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
@@ -28,22 +29,25 @@ const SidebarContent = ({
   filteredNavItems, 
   handleLogout, 
   toggleSidebar 
-}: any) => (
+}: any) => {
+  const { branding } = useBranding();
+
+  return (
   <div className="flex flex-col h-full overflow-hidden">
     {/* Header */}
     <div className={`h-16 w-full flex-shrink-0 flex items-center ${collapsed ? 'justify-center' : 'justify-start'} overflow-hidden border-b border-slate-200 dark:border-white/10 px-5 transition-all`}>
       <div className="flex items-center gap-2.5 min-w-0 overflow-hidden h-full w-full">
         {collapsed ? (
-          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-extrabold text-lg shadow-md flex-shrink-0">
-            <ShieldAlert size={18} />
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-extrabold text-lg shadow-md flex-shrink-0" style={{ backgroundColor: 'var(--accent-indigo)' }}>
+            {branding.logoUrl ? <img src={branding.logoUrl} alt="Logo" className="w-6 h-6 object-contain" /> : <ShieldAlert size={18} />}
           </div>
         ) : (
           <>
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-extrabold text-lg shadow-md flex-shrink-0">
-              <ShieldAlert size={18} />
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-extrabold text-lg shadow-md flex-shrink-0" style={{ backgroundColor: 'var(--accent-indigo)' }}>
+              {branding.logoUrl ? <img src={branding.logoUrl} alt="Logo" className="w-6 h-6 object-contain" /> : <ShieldAlert size={18} />}
             </div>
             <span className="text-slate-800 dark:text-white font-extrabold text-lg sm:text-xl tracking-tight block py-1 sm:py-2 text-left leading-tight truncate w-full flex items-center overflow-hidden">
-              SecureVision ERP
+              {branding.appName}
             </span>
           </>
         )}

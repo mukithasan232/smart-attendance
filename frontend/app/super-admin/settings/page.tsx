@@ -4,13 +4,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import {
   Camera, Smartphone, BrainCircuit, Database, Save, Loader2, Trash2, Plus,
   Video, Plug, Mail, SendHorizonal, CheckCircle, XCircle, Eye, EyeOff,
-  Pencil, Play, Wifi, WifiOff, AlertTriangle, X,
+  Pencil, Play, Wifi, WifiOff, AlertTriangle, X, Paintbrush,
 } from 'lucide-react';
+import { useBranding } from '@/components/providers/BrandingContext';
 import {
   getCameras, addCamera, updateCamera, deleteCamera, applyCamera, CameraConfig, SmtpSettings
 } from '@/lib/api';
 
-type Tab = 'camera' | 'notifications' | 'ai' | 'database' | 'integrations';
+type Tab = 'appearance' | 'camera' | 'notifications' | 'ai' | 'database' | 'integrations';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -214,6 +215,33 @@ export default function SettingsPage() {
     setToast({ message, type });
     setTimeout(() => setToast(null), 4000);
   }, []);
+
+  const { branding, setBranding } = useBranding();
+  const [brandingForm, setBrandingForm] = useState(branding);
+  const [brandingSaving, setBrandingSaving] = useState(false);
+
+  useEffect(() => {
+    setBrandingForm(branding);
+  }, [branding]);
+
+  const handleSaveBranding = async () => {
+    setBrandingSaving(true);
+    try {
+      const res = await fetch('/api/settings/branding', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(brandingForm),
+      });
+      if (!res.ok) throw new Error('Failed to save branding settings');
+      const data = await res.json();
+      setBranding(data.branding);
+      showToast('Branding updated successfully.', 'success');
+    } catch (err: any) {
+      showToast(err.message, 'error');
+    } finally {
+      setBrandingSaving(false);
+    }
+  };
 
   // ── Camera tab state ────────────────────────────────────────────────────────
   const [cameras, setCameras] = useState<CameraConfig[]>([]);
@@ -450,6 +478,7 @@ export default function SettingsPage() {
   };
 
   const tabs: { id: Tab; label: string; icon: React.ReactNode }[] = [
+    { id: 'appearance',    label: 'Appearance & Branding',   icon: <Paintbrush size={18} /> },
     { id: 'camera',        label: 'Camera Management',       icon: <Camera size={18} /> },
     { id: 'notifications', label: 'Notifications (Telegram)', icon: <Smartphone size={18} /> },
     { id: 'integrations',  label: 'Integrations (Email)',    icon: <Plug size={18} /> },
@@ -508,6 +537,49 @@ export default function SettingsPage() {
 
           {/* Content */}
           <div className="settings-content">
+
+            {/* ── APPEARANCE & BRANDING ──────────────────────────────────────── */}
+            {activeTab === 'appearance' && (
+              <div className="bg-white rounded-[20px] p-6 lg:p-8 shadow-sm border border-slate-100 flex flex-col gap-6 w-full overflow-hidden">
+                <div className="settings-card-header">
+                  <h2 className="settings-card-title">Appearance & Branding</h2>
+                  <p className="settings-card-subtitle">
+                    Customize the global appearance of the application.
+                  </p>
+                </div>
+                <div className="settings-card-body space-y-5">
+                  <div className="form-group">
+                    <label className="form-label">Application Name</label>
+                    <input type="text" className="w-full md:w-1/2 px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" value={brandingForm.appName} onChange={e => setBrandingForm({ ...brandingForm, appName: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Tagline / Subtitle</label>
+                    <input type="text" className="w-full md:w-1/2 px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" value={brandingForm.tagline} onChange={e => setBrandingForm({ ...brandingForm, tagline: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Primary Brand Color</label>
+                    <div className="flex items-center gap-3">
+                      <input type="color" className="w-12 h-12 p-1 rounded border border-slate-200 cursor-pointer" value={brandingForm.primaryColor} onChange={e => setBrandingForm({ ...brandingForm, primaryColor: e.target.value })} />
+                      <span className="text-sm text-slate-500 font-mono">{brandingForm.primaryColor}</span>
+                    </div>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Logo URL</label>
+                    <input type="url" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="https://example.com/logo.png" value={brandingForm.logoUrl} onChange={e => setBrandingForm({ ...brandingForm, logoUrl: e.target.value })} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Favicon URL</label>
+                    <input type="url" className="w-full px-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="https://example.com/favicon.ico" value={brandingForm.faviconUrl} onChange={e => setBrandingForm({ ...brandingForm, faviconUrl: e.target.value })} />
+                  </div>
+                </div>
+                <div className="settings-card-footer">
+                  <button className="btn-primary" onClick={handleSaveBranding} disabled={brandingSaving}>
+                    {brandingSaving ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />}
+                    Save Branding
+                  </button>
+                </div>
+              </div>
+            )}
 
             {/* ── CAMERA MANAGEMENT ─────────────────────────────────────────── */}
             {activeTab === 'camera' && (
