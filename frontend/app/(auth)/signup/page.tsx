@@ -26,14 +26,40 @@ export default function SignupPage() {
     }
 
     setIsLoading(true);
-    // Placeholder API call
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-      setToast({ message: 'Account created successfully! Redirecting...', type: 'success' });
-      // Here we would handle actual redirection: router.push('/pricing') or router.push('/dashboard')
-    } catch {
-      setToast({ message: 'An error occurred. Please try again.', type: 'error' });
-    } finally {
+      // 1. Call our API to create user in Supabase (Admin) and Prisma
+      const res = await fetch('/api/auth/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password, fullName, orgName })
+      });
+      
+      const data = await res.json();
+      
+      if (!res.ok) {
+        throw new Error(data.error || 'Failed to create account.');
+      }
+
+      setToast({ message: 'Account created! Logging you in...', type: 'success' });
+      
+      // 2. Auto-login using Supabase client to set session dynamically
+      const { createClient } = await import('@/utils/supabase/client');
+      const supabase = createClient();
+      
+      const { error: signInError } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+
+      if (signInError) {
+        throw new Error('Account created, but auto-login failed. Please sign in manually.');
+      }
+
+      // 3. Redirect to dashboard dynamically
+      window.location.href = window.location.origin + '/dashboard';
+      
+    } catch (err: any) {
+      setToast({ message: err.message || 'An error occurred. Please try again.', type: 'error' });
       setIsLoading(false);
       setTimeout(() => setToast(null), 3000);
     }

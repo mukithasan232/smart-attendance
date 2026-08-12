@@ -121,7 +121,8 @@ const SidebarContent = ({
       )}
     </div>
   </div>
-);
+  );
+};
 
 export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const pathname = usePathname();

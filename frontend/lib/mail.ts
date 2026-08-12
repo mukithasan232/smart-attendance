@@ -1,32 +1,92 @@
 import nodemailer from 'nodemailer';
+import { prisma } from '@/lib/prisma';
 
-const SMTP_HOST = process.env.SMTP_HOST;
-const SMTP_PORT = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
-const SMTP_USER = process.env.SMTP_USER;
-const SMTP_PASS = process.env.SMTP_PASS;
-const FROM_EMAIL = process.env.FROM_EMAIL || 'no-reply@smartattendance.com';
+// Helper to get transporter dynamically from DB or fallback to ENV
+const getTransporter = async () => {
+  try {
+    const record = await prisma.systemSettings.findUnique({
+      where: { key: 'smtp' },
+    });
 
-let transporter: nodemailer.Transporter | null = null;
+    if (record && record.value) {
+      const smtp = record.value as any;
+      if (smtp.enabled && smtp.host && smtp.user && smtp.password) {
+        return nodemailer.createTransport({
+          host: smtp.host,
+          port: smtp.port || 587,
+          secure: smtp.port === 465,
+          auth: {
+            user: smtp.user,
+            pass: smtp.password,
+          },
+        });
+      }
+    }
+  } catch (error) {
+    console.error('Failed to load SMTP settings from DB:', error);
+  }
 
-if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
-  transporter = nodemailer.createTransport({
-    host: SMTP_HOST,
-    port: SMTP_PORT,
-    secure: SMTP_PORT === 465, // true for 465, false for other ports
-    auth: {
-      user: SMTP_USER,
-      pass: SMTP_PASS,
-    },
-  });
-} else {
-  console.warn('SMTP environment variables are missing. Emails will be logged to console instead of sent.');
-}
+  // Fallback to ENV vars
+  const SMTP_HOST = process.env.SMTP_HOST;
+  const SMTP_PORT = process.env.SMTP_PORT ? parseInt(process.env.SMTP_PORT) : 587;
+  const SMTP_USER = process.env.SMTP_USER;
+  const SMTP_PASS = process.env.SMTP_PASS;
 
-const sendMail = async (to: string, subject: string, html: string) => {
+  if (SMTP_HOST && SMTP_USER && SMTP_PASS) {
+    return nodemailer.createTransport({
+      host: SMTP_HOST,
+      port: SMTP_PORT,
+      secure: SMTP_PORT === 465,
+      auth: {
+        user: SMTP_USER,
+        pass: SMTP_PASS,
+      },
+    });
+  }
+
+  return null;
+};
+
+const getFromEmail = async () => {
+  try {
+    const record = await prisma.systemSettings.findUnique({
+      where: { key: 'smtp' },
+    });
+    if (record && record.value) {
+      const smtp = record.value as any;
+      if (smtp.enabled && smtp.from_addr) return smtp.from_addr;
+      if (smtp.enabled && smtp.user) return smtp.user;
+    }
+  } catch (e) {}
+  
+  return process.env.FROM_EMAIL || 'no-reply@smartattendance.com';
+};
+
+const getHtmlTemplate = async (content: string) => {
+  try {
+    const record = await prisma.systemSettings.findUnique({
+      where: { key: 'smtp' },
+    });
+    if (record && record.value) {
+      const smtp = record.value as any;
+      if (smtp.html_template) {
+        return smtp.html_template.replace('{{message}}', content);
+      }
+    }
+  } catch (e) {}
+  
+  return getBaseLayout(content);
+};
+
+const sendMail = async (to: string, subject: string, htmlContent: string) => {
+  const transporter = await getTransporter();
+  const fromEmail = await getFromEmail();
+  const html = await getHtmlTemplate(htmlContent);
+
   if (transporter) {
     try {
       await transporter.sendMail({
-        from: FROM_EMAIL,
+        from: fromEmail,
         to,
         subject,
         html,
@@ -83,7 +143,7 @@ export const sendWelcomeEmail = async (email: string) => {
     <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login" class="btn">Log In Now</a>
     <p>If you have any questions, feel free to reply to this email.</p>
   `;
-  await sendMail(email, 'Welcome to Smart Attendance!', getBaseLayout(content));
+  await sendMail(email, 'Welcome to Smart Attendance!', content);
 };
 
 export const sendLoginAlertEmail = async (email: string) => {
@@ -95,7 +155,7 @@ export const sendLoginAlertEmail = async (email: string) => {
     <p>If you do not recognize this activity, please reset your password immediately and contact support.</p>
     <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/forgot-password" class="btn">Reset Password</a>
   `;
-  await sendMail(email, 'Security Alert: New Login Detected', getBaseLayout(content));
+  await sendMail(email, 'Security Alert: New Login Detected', content);
 };
 
 export const sendPasswordResetEmail = async (email: string, resetToken: string) => {
@@ -107,5 +167,5 @@ export const sendPasswordResetEmail = async (email: string, resetToken: string) 
     <a href="${resetLink}" class="btn">Reset My Password</a>
     <p>If you did not request a password reset, please ignore this email or contact support if you have concerns.</p>
   `;
-  await sendMail(email, 'Reset your Smart Attendance password', getBaseLayout(content));
+  await sendMail(email, 'Reset your Smart Attendance password', content);
 };
