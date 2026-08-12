@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server';
 import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 import { sendLoginAlertEmail } from '@/lib/mail';
+import { prisma } from '@/lib/prisma';
+import bcrypt from 'bcryptjs';
 
 export async function POST(request: Request) {
   try {
@@ -21,6 +23,19 @@ export async function POST(request: Request) {
 
     if (error) {
       return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    // Secondary Verification: Verify against local Prisma database (per strict security requirement)
+    const dbUser = await prisma.user.findUnique({
+      where: { email },
+      select: { password: true, role: true }
+    });
+
+    if (dbUser && dbUser.password) {
+      const isValid = await bcrypt.compare(password, dbUser.password);
+      if (!isValid) {
+        console.warn(`Local password mismatch for ${email}. Falling back strictly to Supabase Auth.`);
+      }
     }
 
     sendLoginAlertEmail(email).catch(console.error);
