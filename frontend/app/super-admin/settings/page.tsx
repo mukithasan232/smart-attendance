@@ -416,10 +416,13 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(smtp)
       });
-      if (!res.ok) throw new Error('Failed to save settings');
+      if (!res.ok) {
+        const errData = await res.json().catch(() => null);
+        throw new Error(errData?.error || 'Failed to save settings');
+      }
       showToast('SMTP settings saved successfully.', 'success');
-    } catch (err) {
-      showToast('Failed to save SMTP settings.', 'error');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to save SMTP settings.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -433,14 +436,14 @@ export default function SettingsPage() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(smtp)
       });
-      const data = await res.json();
+      const data = await res.json().catch(() => ({}));
       if (res.ok) {
         showToast('Test email sent successfully!', 'success');
       } else {
         showToast(data.error || 'Failed to send test email', 'error');
       }
-    } catch (err) {
-      showToast('Failed to send test email', 'error');
+    } catch (err: any) {
+      showToast(err.message || 'Failed to send test email', 'error');
     } finally {
       setIsTestingConnection(false);
     }
