@@ -17,12 +17,12 @@ export default function EventsTable() {
     setTimeout(() => setToast(null), 4000);
   };
 
-  const handleMakeKnown = async (eventId: number) => {
+  const handleMakeKnown = async (eventId: number, imagePath: string) => {
     const name = window.prompt("Enter name for this person:");
     if (!name || !name.trim()) return;
 
     try {
-      await registerPersonFromEvent(eventId, name.trim());
+      await registerPersonFromEvent(eventId, name.trim(), imagePath);
       showToast(`Successfully registered ${name}!`, "success");
       fetchEvents();
     } catch (err: unknown) {
@@ -193,7 +193,7 @@ export default function EventsTable() {
                         {ev.status === "Unknown" && ev.buffer_status !== "added" && (
                           <button
                             className="btn-secondary text-xs py-1 px-2"
-                            onClick={() => handleMakeKnown(ev.id)}
+                            onClick={() => handleMakeKnown(ev.id, ev.snapshot_path)}
                             title="Register this person"
                           >
                             <UserPlus size={12} />
