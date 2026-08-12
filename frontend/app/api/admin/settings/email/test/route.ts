@@ -43,12 +43,17 @@ export async function POST(request: Request) {
       },
     });
 
+    const testMessageText = 'This is a test email sent from the SecureVision ERP Super Admin Settings.';
+    const htmlContent = smtp.html_template 
+      ? smtp.html_template.replace('{{message}}', testMessageText)
+      : `<b>${testMessageText}</b>`;
+
     const info = await transporter.sendMail({
       from: smtp.from_addr || smtp.user,
       to: smtp.to_emails,
       subject: 'Test Email - SecureVision ERP',
-      text: 'This is a test email sent from the SecureVision ERP Super Admin Settings.',
-      html: '<b>This is a test email sent from the SecureVision ERP Super Admin Settings.</b>',
+      text: testMessageText,
+      html: htmlContent,
     });
 
     return NextResponse.json({ success: true, message: `Test email sent successfully! Message ID: ${info.messageId}` }, { status: 200 });

@@ -378,7 +378,7 @@ export default function SettingsPage() {
   const [smtp, setSmtp] = useState<SmtpSettings>({
     enabled: false, host: 'smtp.gmail.com', port: 587, use_tls: true,
     user: '', password: '', from_addr: '', to_emails: '',
-    alert_unknown: true, alert_known: false,
+    alert_unknown: true, alert_known: false, html_template: '',
   });
 
   useEffect(() => {
@@ -795,6 +795,37 @@ export default function SettingsPage() {
                       <SectionRow title="Alert on Known Person Arrival" desc="Send a notification when a registered visitor is detected.">
                         <Toggle checked={smtp.alert_known} onChange={() => setSmtp(p => ({ ...p, alert_known: !p.alert_known }))} />
                       </SectionRow>
+
+                      <div style={{ borderTop: '1px solid var(--border)', margin: '24px 0' }} />
+                      <h3 style={{ fontSize: '13px', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)', marginBottom: '16px' }}>Email Template Design</h3>
+                      <div className="flex flex-col lg:flex-row gap-6">
+                        <div className="flex-1">
+                          <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>HTML Code Editor</label>
+                          <p className="setting-desc" style={{ marginBottom: '12px' }}>Use <code>{`{{message}}`}</code> as a placeholder for the alert text.</p>
+                          <textarea
+                            value={smtp.html_template || ''}
+                            onChange={e => setSmtp(p => ({ ...p, html_template: e.target.value }))}
+                            className="w-full px-4 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 font-mono text-xs"
+                            style={{ minHeight: '350px', backgroundColor: '#1e1e1e', color: '#d4d4d4', resize: 'vertical' }}
+                            placeholder="<div>{{message}}</div>"
+                            spellCheck={false}
+                          />
+                        </div>
+                        <div className="flex-1">
+                          <label className="form-label" style={{ marginBottom: '8px', display: 'block' }}>Live Preview</label>
+                          <p className="setting-desc" style={{ marginBottom: '12px' }}>Preview how the email looks.</p>
+                          <div
+                            style={{ 
+                              border: '1px solid var(--border)', 
+                              borderRadius: 'var(--radius-xl)', 
+                              height: '350px', 
+                              overflowY: 'auto',
+                              backgroundColor: '#f9fafb',
+                            }}
+                            dangerouslySetInnerHTML={{ __html: (smtp.html_template || '').replace('{{message}}', 'This is a sample alert message for preview purposes.') }}
+                          />
+                        </div>
+                      </div>
                     </div>
                     <div className="settings-card-footer">
                       <button className="btn-secondary" onClick={handleTestEmail} disabled={isTestingConnection || !smtp.enabled} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>

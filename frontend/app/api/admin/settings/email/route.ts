@@ -31,6 +31,20 @@ const DEFAULT_SMTP = {
   to_emails: '',
   alert_unknown: false,
   alert_known: false,
+  html_template: `<div style="font-family: 'Helvetica Neue', Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px; border-radius: 8px;">
+  <div style="background-color: #1e3a8a; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
+    <h1 style="color: #ffffff; margin: 0; font-size: 24px; font-weight: 600;">SecureVision ERP</h1>
+  </div>
+  <div style="background-color: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px; color: #374151; line-height: 1.6;">
+    <p style="font-size: 16px; margin-top: 0;">Hello,</p>
+    <div style="margin: 25px 0; padding: 20px; background-color: #f8fafc; border-left: 4px solid #3b82f6; border-radius: 6px; font-size: 15px;">
+      {{message}}
+    </div>
+    <p style="font-size: 13px; color: #6b7280; margin-top: 30px; margin-bottom: 0; border-top: 1px solid #e5e7eb; padding-top: 15px;">
+      This is an automated notification from SecureVision ERP. Please do not reply to this email.
+    </p>
+  </div>
+</div>`,
 };
 
 export async function GET() {

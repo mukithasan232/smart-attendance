@@ -144,6 +144,7 @@ export interface SmtpSettings {
   to_emails: string;
   alert_unknown: boolean;
   alert_known: boolean;
+  html_template?: string;
 }
 
 export const getNotificationSettings = (): Promise<{ smtp: SmtpSettings }> =>
