@@ -28,8 +28,8 @@ export default function PersonsPage() {
     try {
       const data = await getPersons();
       setPersons(data || []);
-    } catch {
-      showToast("Failed to load persons list.", "error");
+    } catch (err: unknown) {
+      showToast((err as Error).message || "Failed to load persons list.", "error");
     } finally {
       setLoading(false);
     }

@@ -1,13 +1,23 @@
 "use client";
 /* eslint-disable @next/next/no-img-element */
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Maximize2, RefreshCw, Activity, ShieldCheck, Video, ServerCrash, Loader2 } from 'lucide-react';
 import { STREAM_URL } from '@/lib/api';
+import { getCameraSource, getProxiedStreamUrl } from '@/lib/camera';
 
 export default function LiveMonitorPage() {
   const [streamFailed, setStreamFailed] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [streamUrl, setStreamUrl] = useState(STREAM_URL);
+
+  useEffect(() => {
+    const customSource = getCameraSource();
+    if (customSource && customSource !== '0') {
+      setStreamUrl(getProxiedStreamUrl(customSource));
+    } else {
+      setStreamUrl(STREAM_URL);
+    }
+  }, []);
 
   const cameras = [
     { id: 'cam-01', name: 'Main Entrance', active: true },
@@ -18,8 +28,12 @@ export default function LiveMonitorPage() {
   const handleRefresh = () => {
     setIsRefreshing(true);
     setStreamFailed(false);
-    // Force a re-render of the image by changing the URL slightly
-    setStreamUrl(`${STREAM_URL}?t=${Date.now()}`);
+    
+    const customSource = getCameraSource();
+    const base = (customSource && customSource !== '0') ? getProxiedStreamUrl(customSource) : STREAM_URL;
+    const sep = base.includes('?') ? '&' : '?';
+    setStreamUrl(`${base}${sep}t=${Date.now()}`);
+    
     setTimeout(() => setIsRefreshing(false), 800);
   };
 

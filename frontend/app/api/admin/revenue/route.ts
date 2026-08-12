@@ -12,8 +12,8 @@ async function requireAdmin() {
     return { error: 'Unauthorized', status: 401 };
   }
 
-  const role = user.app_metadata?.role;
-  if (role !== 'ADMIN') {
+  const dbUser = await prisma.user.findUnique({ where: { id: user.id } });
+  if (dbUser?.role !== 'ADMIN') {
     return { error: 'Forbidden: Admin access required', status: 403 };
   }
 
@@ -27,12 +27,15 @@ export async function GET() {
   }
 
   try {
-    const clients = await prisma.client.findMany({
-      orderBy: { joinedAt: 'desc' },
+    const bills = await prisma.bill.findMany({
+      include: {
+        user: { select: { email: true } }
+      },
+      orderBy: { createdAt: 'desc' },
     });
-    return NextResponse.json(clients, { status: 200 });
+    return NextResponse.json(bills, { status: 200 });
   } catch (error) {
-    console.error('Error fetching clients:', error);
+    console.error('Error fetching revenue:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }
@@ -45,29 +48,28 @@ export async function POST(request: Request) {
 
   try {
     const body = await request.json();
-    const { name, subdomain, adminEmail, plan, status, users } = body;
+    const { userId, amount, currency, description, dueDate } = body;
 
-    if (!name || !subdomain) {
-      return NextResponse.json({ error: 'Name and subdomain are required' }, { status: 400 });
+    if (!userId || !amount) {
+      return NextResponse.json({ error: 'User ID and amount are required' }, { status: 400 });
     }
 
-    const newClient = await prisma.client.create({
+    const newBill = await prisma.bill.create({
       data: {
-        name,
-        subdomain,
-        adminEmail,
-        plan: plan || 'Starter',
-        status: status || 'Active',
-        users: users || 0,
+        userId,
+        amount: parseFloat(amount),
+        currency: currency || 'USD',
+        description,
+        dueDate: dueDate ? new Date(dueDate) : null,
       },
+      include: {
+        user: { select: { email: true } }
+      }
     });
 
-    return NextResponse.json(newClient, { status: 201 });
+    return NextResponse.json(newBill, { status: 201 });
   } catch (error: any) {
-    console.error('Error creating client:', error);
-    if (error.code === 'P2002') {
-      return NextResponse.json({ error: 'Subdomain already exists' }, { status: 400 });
-    }
+    console.error('Error generating bill:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

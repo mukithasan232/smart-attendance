@@ -168,23 +168,39 @@ export interface CameraConfig {
   enabled: boolean;
 }
 
-export const getCameras = (): Promise<{ cameras: CameraConfig[] }> =>
-  apiFetch<{ cameras: CameraConfig[] }>("/api/settings/cameras");
+export const getCameras = async (): Promise<{ cameras: CameraConfig[] }> => {
+  const res = await fetch("/api/cameras");
+  if (!res.ok) throw new Error("Failed to get cameras");
+  return res.json();
+};
 
-export const addCamera = (cam: Omit<CameraConfig, "id">): Promise<{ message: string; camera: CameraConfig }> =>
-  apiFetch("/api/settings/cameras", {
+export const addCamera = async (cam: Omit<CameraConfig, "id">): Promise<{ message: string; camera: CameraConfig }> => {
+  const res = await fetch("/api/cameras", {
     method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(cam),
   });
+  if (!res.ok) throw new Error("Failed to add camera");
+  return res.json();
+};
 
-export const updateCamera = (id: string, cam: Omit<CameraConfig, "id">): Promise<{ message: string; camera: CameraConfig }> =>
-  apiFetch(`/api/settings/cameras/${id}`, {
+export const updateCamera = async (id: string, cam: Omit<CameraConfig, "id">): Promise<{ message: string; camera: CameraConfig }> => {
+  const res = await fetch(`/api/cameras/${id}`, {
     method: "PUT",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify(cam),
   });
+  if (!res.ok) throw new Error("Failed to update camera");
+  return res.json();
+};
 
-export const deleteCamera = (id: string): Promise<{ message: string }> =>
-  apiFetch(`/api/settings/cameras/${id}`, { method: "DELETE" });
+export const deleteCamera = async (id: string): Promise<{ message: string }> => {
+  const res = await fetch(`/api/cameras/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to delete camera");
+  return res.json();
+};
 
 export const applyCamera = (id: string): Promise<{ message: string; url: string }> =>
   apiFetch(`/api/settings/cameras/${id}/apply`, { method: "POST" });
+
+

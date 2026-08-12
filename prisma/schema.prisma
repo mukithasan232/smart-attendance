@@ -24,9 +24,10 @@ model User {
 }
 
 model Client {
-  id        String   @id @default(uuid())
-  name      String
-  subdomain String   @unique
+  id         String   @id @default(uuid())
+  name       String
+  subdomain  String   @unique
+  adminEmail String?
   plan      String   @default("Starter")
   status    String   @default("Active")
   users     Int      @default(0)
@@ -86,4 +87,14 @@ model Transaction {
   
   bill          Bill          @relation(fields: [billId], references: [id])
   user          User          @relation(fields: [userId], references: [id])
+}
+
+model CameraSetting {
+  id        String   @id @default(uuid())
+  name      String
+  url       String
+  location  String?
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

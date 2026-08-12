@@ -13,6 +13,7 @@ type ClientData = {
   plan: string;
   status: string;
   users: number;
+  adminEmail: string | null;
   joinedAt: string;
 };
 
@@ -113,7 +114,7 @@ export default function ClientsPage() {
   const [isSaving, setIsSaving] = useState(false);
 
   // Form states
-  const [formData, setFormData] = useState({ name: '', subdomain: '', plan: 'Starter', status: 'Active' });
+  const [formData, setFormData] = useState({ name: '', subdomain: '', adminEmail: '', plan: 'Starter', status: 'Active' });
 
   const showToast = (msg: string, type: 'success' | 'error') => {
     setToast({ msg, type });
@@ -166,7 +167,7 @@ export default function ClientsPage() {
       showToast(`Client ${isEdit ? 'updated' : 'added'} successfully!`, 'success');
       setShowAddModal(false);
       setEditingClient(null);
-      setFormData({ name: '', subdomain: '', plan: 'Starter', status: 'Active' });
+      setFormData({ name: '', subdomain: '', adminEmail: '', plan: 'Starter', status: 'Active' });
       fetchClients();
     } catch (error: any) {
       showToast(error.message, 'error');
@@ -193,14 +194,15 @@ export default function ClientsPage() {
   };
 
   const openAddModal = () => {
-    setFormData({ name: '', subdomain: '', plan: 'Starter', status: 'Active' });
+    setFormData({ name: '', subdomain: '', adminEmail: '', plan: 'Starter', status: 'Active' });
     setShowAddModal(true);
   };
 
   const openEditModal = (client: ClientData) => {
     setFormData({ 
       name: client.name, 
-      subdomain: client.subdomain, 
+      subdomain: client.subdomain,
+      adminEmail: client.adminEmail || '',
       plan: client.plan, 
       status: client.status 
     });
@@ -313,7 +315,12 @@ export default function ClientsPage() {
                           <div className="w-9 h-9 rounded-full bg-indigo-100 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-bold text-xs uppercase flex-shrink-0 shadow-inner">
                             {client.name.substring(0, 2)}
                           </div>
-                          <span className="truncate max-w-[150px] md:max-w-[250px]">{client.name}</span>
+                          <div className="flex flex-col">
+                            <span className="truncate max-w-[150px] md:max-w-[250px]">{client.name}</span>
+                            {client.adminEmail && (
+                              <span className="text-[10px] text-slate-400 font-normal">{client.adminEmail}</span>
+                            )}
+                          </div>
                         </div>
                       </td>
                       <td className="text-slate-500 dark:text-slate-400 font-mono text-xs">
@@ -384,6 +391,16 @@ export default function ClientsPage() {
                   value={formData.name} onChange={e => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-900 dark:text-white text-sm transition-shadow"
                   placeholder="e.g. Acme Corp"
+                />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
+                <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Admin Email</label>
+                <input 
+                  type="email"
+                  value={formData.adminEmail} onChange={e => setFormData({ ...formData, adminEmail: e.target.value })}
+                  className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500/50 text-slate-900 dark:text-white text-sm transition-shadow"
+                  placeholder="admin@acmecorp.com"
                 />
               </div>
 

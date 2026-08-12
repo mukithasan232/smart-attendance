@@ -147,22 +147,26 @@ ACTIVE_CAMERA_URL = 0
 ACTIVE_CAMERA_ID = "default-0"
 IS_CAMERA_RUNNING = False
 
-def load_cameras():
-    if os.path.exists(CAMERAS_FILE):
-        try:
-            with open(CAMERAS_FILE, "r") as f:
-                return json.load(f)
-        except Exception:
-            return []
-    # Default fallback
+def load_cameras_sync():
+    # Fallback sync version for initial load
     return [{"id": "default-0", "name": "Primary Camera", "url": CAMERA_SOURCE, "location": "Local", "enabled": True}]
 
+async def load_cameras_async():
+    if not db_pool:
+        return load_cameras_sync()
+    try:
+        async with db_pool.acquire() as conn:
+            rows = await conn.fetch('SELECT id, name, url, location, enabled FROM "CameraSetting" ORDER BY "createdAt" DESC')
+            return [dict(r) for r in rows]
+    except Exception as e:
+        logger.error(f"Failed to load cameras from DB: {e}")
+        return load_cameras_sync()
+
 def save_cameras(cams):
-    with open(CAMERAS_FILE, "w") as f:
-        json.dump(cams, f, indent=4)
+    pass # Managed by Next.js now
 
 # Set initial active camera on startup
-_initial_cams = load_cameras()
+_initial_cams = load_cameras_sync()
 _active = next((c for c in _initial_cams if c.get("enabled")), _initial_cams[0] if _initial_cams else None)
 if _active:
     ACTIVE_CAMERA_URL = _active["url"]
@@ -556,44 +560,11 @@ def get_status():
         "camera_id": ACTIVE_CAMERA_ID
     }
 
-@app.get("/api/settings/cameras")
-def api_get_cameras():
-    return {"cameras": load_cameras()}
-
-@app.post("/api/settings/cameras")
-def api_add_camera(cam: CameraInput):
-    cams = load_cameras()
-    new_cam = cam.model_dump()
-    new_cam["id"] = str(uuid.uuid4())
-    cams.append(new_cam)
-    save_cameras(cams)
-    return {"message": "Camera added", "camera": new_cam}
-
-@app.put("/api/settings/cameras/{cam_id}")
-def api_update_camera(cam_id: str, cam: CameraInput):
-    cams = load_cameras()
-    updated = None
-    for c in cams:
-        if c["id"] == cam_id:
-            c.update(cam.model_dump())
-            updated = c
-            break
-    if updated:
-        save_cameras(cams)
-        return {"message": "Camera updated", "camera": updated}
-    return {"message": "Not found", "camera": None}
-
-@app.delete("/api/settings/cameras/{cam_id}")
-def api_delete_camera(cam_id: str):
-    cams = load_cameras()
-    new_cams = [c for c in cams if c["id"] != cam_id]
-    save_cameras(new_cams)
-    return {"message": "Camera deleted"}
 
 @app.post("/api/settings/cameras/{cam_id}/apply")
-def api_apply_camera(cam_id: str):
+async def api_apply_camera(cam_id: str):
     global ACTIVE_CAMERA_URL, ACTIVE_CAMERA_ID
-    cams = load_cameras()
+    cams = await load_cameras_async()
     cam = next((c for c in cams if c["id"] == cam_id), None)
     if not cam:
         return {"message": "Camera not found", "url": ""}
@@ -622,7 +593,8 @@ async def get_persons():
             return [dict(r) for r in rows]
     except Exception as e:
         logger.error(f"Failed to fetch persons from PostgreSQL: {e}")
-        return []
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=500, content={"error": "DB_CONNECTION_FAILED", "details": str(e)})
 
 @app.delete("/api/persons/{person_id}")
 async def delete_person(person_id: int):

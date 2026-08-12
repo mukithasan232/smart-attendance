@@ -31,7 +31,7 @@ export async function PATCH(
 
   try {
     const body = await request.json();
-    const { name, subdomain, plan, status, users } = body;
+    const { name, subdomain, adminEmail, plan, status, users } = body;
     const { id } = await params;
 
     const updatedClient = await prisma.client.update({
@@ -39,6 +39,7 @@ export async function PATCH(
       data: {
         ...(name && { name }),
         ...(subdomain && { subdomain }),
+        ...(adminEmail !== undefined && { adminEmail }),
         ...(plan && { plan }),
         ...(status && { status }),
         ...(users !== undefined && { users }),

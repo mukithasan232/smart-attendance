@@ -604,7 +604,8 @@ def list_persons():
         return res.data
     except Exception as exc:
         logger.error(f"Failed to load persons list: {exc}")
-        return []
+        from fastapi.responses import JSONResponse
+        return JSONResponse(status_code=500, content={"error": "DB_CONNECTION_FAILED", "details": str(exc)})
 
 
 @app.post("/api/events/{event_id}/register_person", summary="Register unknown person from event")
