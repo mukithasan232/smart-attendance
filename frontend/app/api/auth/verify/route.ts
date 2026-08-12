@@ -1,8 +1,52 @@
+// Force TS re-evaluation
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { prisma } from '@/lib/prisma';
 import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
+
+export async function GET(request: Request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const token = searchParams.get('token');
+
+    if (!token) {
+      return NextResponse.redirect(new URL('/login?error=MissingToken', request.url));
+    }
+
+    const userRecord = await prisma.user.findFirst({
+      where: { verificationToken: token }
+    });
+
+    if (!userRecord) {
+      return NextResponse.redirect(new URL('/login?error=InvalidToken', request.url));
+    }
+
+    // 1. Update in Prisma
+    await prisma.user.update({
+      where: { id: userRecord.id },
+      data: { isVerified: true, verificationToken: null },
+    });
+
+    const adminAuthClient = createAdminClient();
+
+    // 2. Update in Supabase app_metadata
+    const { data: existingUser } = await adminAuthClient.auth.admin.getUserById(userRecord.id);
+    const currentRole = existingUser?.user?.app_metadata?.role || 'USER';
+
+    if (existingUser?.user) {
+      await adminAuthClient.auth.admin.updateUserById(userRecord.id, {
+        app_metadata: { role: currentRole, isVerified: true },
+        email_confirm: true,
+      });
+    }
+
+    return NextResponse.redirect(new URL('/login?verified=true', request.url));
+  } catch (error) {
+    console.error('Verification GET error:', error);
+    return NextResponse.redirect(new URL('/login?error=ServerError', request.url));
+  }
+}
 
 export async function POST(request: Request) {
   try {
@@ -19,7 +63,6 @@ export async function POST(request: Request) {
     const { userId } = await request.json();
 
     // Only allow users to verify themselves, or an ADMIN to verify others.
-    // We'll keep it simple: users verify themselves here for now (like a mock verification step).
     if (userId !== user.id) {
       // Check if requester is ADMIN
       const requester = await prisma.user.findUnique({ where: { id: user.id } });
@@ -37,7 +80,6 @@ export async function POST(request: Request) {
     });
 
     // 2. Update in Supabase app_metadata
-    // We need to fetch the existing user's role to not overwrite it
     const { data: existingUser, error: userError } = await adminAuthClient.auth.admin.getUserById(userId);
     
     if (userError || !existingUser?.user) {
@@ -52,7 +94,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ message: 'User verified successfully' }, { status: 200 });
   } catch (error) {
-    console.error('Verification error:', error);
+    console.error('Verification POST error:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
   }
 }

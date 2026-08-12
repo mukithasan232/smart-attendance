@@ -138,22 +138,34 @@ const getBaseLayout = (content: string) => `
 export const sendWelcomeEmail = async (email: string) => {
   const content = `
     <h2 style="color: #18181b; margin-top: 0;">Welcome aboard!</h2>
-    <p>We're thrilled to have you join Smart Attendance.</p>
+    <p>We're thrilled to have you join CoderNest.</p>
     <p>Your account has been successfully created. You can now log in and explore all the features we have to offer.</p>
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login" class="btn">Log In Now</a>
+    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://vision.codernest.cloud'}/login" class="btn">Log In Now</a>
     <p>If you have any questions, feel free to reply to this email.</p>
   `;
-  await sendMail(email, 'Welcome to Smart Attendance!', content);
+  await sendMail(email, 'Welcome to CoderNest!', content);
+};
+
+export const sendVerificationEmail = async (email: string, token: string) => {
+  const verifyLink = `${process.env.NEXT_PUBLIC_APP_URL || 'https://vision.codernest.cloud'}/verify?token=${token}`;
+  const content = `
+    <h2 style="color: #18181b; margin-top: 0;">Verify your email</h2>
+    <p>Welcome to CoderNest! Please verify your email address to activate your account.</p>
+    <p>Click the button below to verify. This link will expire in 24 hours.</p>
+    <a href="${verifyLink}" class="btn">Verify My Email</a>
+    <p>If you did not sign up for CoderNest, please ignore this email.</p>
+  `;
+  await sendMail(email, 'Verify your CoderNest account', content);
 };
 
 export const sendLoginAlertEmail = async (email: string) => {
   const content = `
     <h2 style="color: #18181b; margin-top: 0;">New Login Detected</h2>
-    <p>We noticed a new login to your Smart Attendance account.</p>
+    <p>We noticed a new login to your CoderNest account.</p>
     <p><strong>Time:</strong> ${new Date().toUTCString()}</p>
     <p>If this was you, you can safely ignore this email.</p>
-    <p>If you do not recognize this activity, please reset your password immediately and contact support.</p>
-    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/forgot-password" class="btn">Reset Password</a>
+    <p>If you do not recognize this activity, please secure your account immediately.</p>
+    <a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://vision.codernest.cloud'}/forgot-password" class="btn">Reset Password</a>
   `;
   await sendMail(email, 'Security Alert: New Login Detected', content);
 };

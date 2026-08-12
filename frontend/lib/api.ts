@@ -80,11 +80,17 @@ async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
 export const getStatus = (): Promise<SystemStatus> =>
   apiFetch<SystemStatus>("/api/status");
 
-export const getPersons = (): Promise<Person[]> =>
-  apiFetch<Person[]>("/api/persons");
+export const getPersons = async (): Promise<Person[]> => {
+  const res = await fetch("/api/persons");
+  if (!res.ok) throw new Error("Failed to fetch persons");
+  return res.json();
+};
 
-export const deletePerson = (id: number): Promise<{ message: string }> =>
-  apiFetch(`/api/persons/${id}`, { method: "DELETE" });
+export const deletePerson = async (id: number): Promise<{ message: string }> => {
+  const res = await fetch(`/api/persons/${id}`, { method: "DELETE" });
+  if (!res.ok) throw new Error("Failed to delete person");
+  return res.json();
+};
 
 export const getEvents = (limit = 50): Promise<DetectionEvent[]> =>
   apiFetch<DetectionEvent[]>(`/api/events?limit=${limit}`);
@@ -97,13 +103,12 @@ export async function uploadPerson(
   designation: string,
   imageFile: File
 ): Promise<{ message: string; person_id: number }> {
-  await loadConfig();
   const form = new FormData();
   form.append("name", name);
   form.append("designation", designation);
   form.append("image", imageFile);
 
-  const res = await fetch(`${API_BASE}/api/persons`, {
+  const res = await fetch(`/api/persons`, {
     method: "POST",
     body: form,
   });

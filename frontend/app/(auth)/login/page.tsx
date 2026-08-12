@@ -1,11 +1,12 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams } from 'next/navigation';
 import { Loader2, CheckCircle, AlertCircle, Eye, EyeOff } from 'lucide-react';
 import { useBranding } from '@/components/providers/BrandingContext';
 
-export default function LoginPage() {
+function LoginContent() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -13,6 +14,20 @@ export default function LoginPage() {
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   const { branding } = useBranding();
+  const searchParams = useSearchParams();
+
+  useEffect(() => {
+    const verified = searchParams.get('verified');
+    const error = searchParams.get('error');
+    if (verified === 'true') {
+      setToast({ message: 'Email verified successfully! You can now log in.', type: 'success' });
+    } else if (error) {
+      let msg = 'Failed to verify email.';
+      if (error === 'MissingToken') msg = 'Verification token is missing.';
+      if (error === 'InvalidToken') msg = 'Verification token is invalid or expired.';
+      setToast({ message: msg, type: 'error' });
+    }
+  }, [searchParams]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -149,5 +164,13 @@ export default function LoginPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-slate-50"><Loader2 className="animate-spin text-indigo-600" size={32} /></div>}>
+      <LoginContent />
+    </Suspense>
   );
 }

@@ -2,17 +2,26 @@
 import { useState, useEffect, useRef } from 'react';
 import { Bell, Menu, LayoutGrid, ExternalLink } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
+import { useAuth } from '@/components/providers/AuthContext';
+import { createClient } from '@/utils/supabase/client';
 
 export default function Navbar({ onMobileMenuToggleAction }: { onMobileMenuToggleAction?: () => void }) {
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
   const [showApps, setShowApps] = useState(false);
+  const { user, role } = useAuth();
+  const supabase = createClient();
   
   const notifRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
   const appsRef = useRef<HTMLDivElement>(null);
 
   const unreadCount = 3;
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    window.location.href = '/login';
+  };
 
   // Close dropdowns on outside click
   useEffect(() => {
@@ -38,7 +47,7 @@ export default function Navbar({ onMobileMenuToggleAction }: { onMobileMenuToggl
         <div className="flex items-center gap-3">
           <div className="hidden md:flex items-center gap-2">
             <span className="text-gray-400 text-sm font-medium">
-              Good Morning, User
+              Good Morning, {user?.email?.split('@')[0] || 'User'}
             </span>
           </div>
         </div>
@@ -131,25 +140,25 @@ export default function Navbar({ onMobileMenuToggleAction }: { onMobileMenuToggl
             onClick={() => setShowProfile(!showProfile)}
             className={`flex items-center gap-2 p-1 rounded-full transition-all ${showProfile ? 'ring-2 ring-indigo-500/60' : ''}`}
           >
-            <div className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white/20 bg-gradient-to-tr from-indigo-500 to-purple-500">
-              U
+            <div className="h-8 w-8 rounded-full flex items-center justify-center text-white text-xs font-bold border-2 border-white/20 bg-gradient-to-tr from-indigo-500 to-purple-500 uppercase">
+              {user?.email?.charAt(0) || 'U'}
             </div>
           </button>
 
           {showProfile && (
             <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-[#1E293B] border border-slate-200 dark:border-gray-700/50 rounded-2xl shadow-xl dark:shadow-lg dark:shadow-black/20 overflow-hidden z-50">
               <div className="p-4 border-b border-slate-100 dark:border-white/10">
-                <p className="text-slate-800 dark:text-white font-medium text-sm">Demo User</p>
-                <p className="text-slate-500 dark:text-gray-500 text-xs mt-0.5">user@example.com</p>
-                <span className="mt-2 inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-500">
-                  Admin
+                <p className="text-slate-800 dark:text-white font-medium text-sm truncate">{user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Demo User'}</p>
+                <p className="text-slate-500 dark:text-gray-500 text-xs mt-0.5 truncate">{user?.email || 'user@example.com'}</p>
+                <span className="mt-2 inline-block px-2 py-0.5 rounded-full text-xs font-semibold bg-indigo-500/20 text-indigo-500 capitalize">
+                  {role?.replace('_', ' ').toLowerCase() || 'Client'}
                 </span>
               </div>
               <div className="p-2">
                 <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-slate-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-gray-700 text-sm transition-colors">
                   Profile Settings
                 </button>
-                <button className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-500 hover:bg-red-500/5 dark:hover:bg-gray-700 text-sm transition-colors">
+                <button onClick={handleSignOut} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-red-500 hover:bg-red-500/5 dark:hover:bg-gray-700 text-sm transition-colors">
                   Sign Out
                 </button>
               </div>

@@ -8,11 +8,24 @@ import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/components/providers/AuthContext';
 import { useBranding } from '@/components/providers/BrandingContext';
 
-const NAV_ITEMS = [
-  { key: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { key: 'live', label: 'Live Monitor', href: '/live', icon: Video },
-  { key: 'logs', label: 'Visitor Logs', href: '/logs', icon: List },
-  { key: 'persons', label: 'Persons', href: '/persons', icon: Users },
+const NAV_SECTIONS = [
+  {
+    title: 'Main',
+    items: [
+      { key: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+      { key: 'live', label: 'Live Monitor', href: '/live', icon: Video },
+      { key: 'logs', label: 'Visitor Logs', href: '/logs', icon: List },
+      { key: 'persons', label: 'Persons', href: '/persons', icon: Users },
+    ]
+  },
+  {
+    title: 'Settings',
+    items: [
+      { key: 'cameras', label: 'Camera Feeds', href: '/settings/cameras', icon: Video },
+      { key: 'integrations', label: 'Telegram & Alerts', href: '/settings/integrations', icon: Plug },
+      { key: 'account', label: 'Account & Security', href: '/settings/account', icon: ShieldAlert },
+    ]
+  }
 ];
 
 interface SidebarProps {
@@ -63,38 +76,47 @@ const SidebarContent = ({
 
     {/* Nav Items Container */}
     <div className="flex-1 overflow-y-auto w-full">
-      <nav className="px-3 mt-4 space-y-1">
-        {filteredNavItems.map((item: any) => {
-          const isActive = pathname === item.href || (item.href !== '/' && (pathname?.startsWith(item.href) ?? false));
-          const Icon = item.icon;
-          return (
-            <Link
-              key={item.key}
-              href={item.href}
-              onClick={onClose}
-              className={`flex items-center gap-3 py-2.5 rounded-xl transition-all text-sm font-medium group relative ${isActive
-                  ? 'bg-indigo-500/10 text-indigo-600 dark:text-white border border-indigo-500/20 shadow-sm shadow-indigo-500/20'
-                  : 'text-slate-600 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
-                } ${collapsed ? 'justify-center px-0 mx-2' : 'px-4'}`}
-            >
-              <Icon
-                className={`h-5 w-5 flex-shrink-0 transition-colors ${isActive ? 'text-indigo-600 dark:text-white' : 'text-slate-400 dark:text-gray-400 group-hover:text-slate-900 dark:group-hover:text-white'
-                  }`}
-              />
-              {!collapsed && <span className="capitalize">{item.label}</span>}
-              {!collapsed && isActive && (
-                <span className="ml-auto h-1.5 w-1.5 rounded-full flex-shrink-0 bg-indigo-600" />
-              )}
+      <nav className="px-3 mt-4 space-y-6">
+        {filteredNavItems.map((section: any) => (
+          <div key={section.title} className="space-y-1">
+            {!collapsed && (
+              <h4 className="px-4 text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">
+                {section.title}
+              </h4>
+            )}
+            {section.items.map((item: any) => {
+              const isActive = pathname === item.href || (item.href !== '/' && (pathname?.startsWith(item.href) ?? false));
+              const Icon = item.icon;
+              return (
+                <Link
+                  key={item.key}
+                  href={item.href}
+                  onClick={onClose}
+                  className={`flex items-center gap-3 py-2.5 rounded-xl transition-all text-sm font-medium group relative ${isActive
+                      ? 'bg-indigo-500/10 text-indigo-600 dark:text-white border border-indigo-500/20 shadow-sm shadow-indigo-500/20'
+                      : 'text-slate-600 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+                    } ${collapsed ? 'justify-center px-0 mx-2' : 'px-4'}`}
+                >
+                  <Icon
+                    className={`h-5 w-5 flex-shrink-0 transition-colors ${isActive ? 'text-indigo-600 dark:text-white' : 'text-slate-400 dark:text-gray-400 group-hover:text-slate-900 dark:group-hover:text-white'
+                      }`}
+                  />
+                  {!collapsed && <span className="capitalize">{item.label}</span>}
+                  {!collapsed && isActive && (
+                    <span className="ml-auto h-1.5 w-1.5 rounded-full flex-shrink-0 bg-indigo-600" />
+                  )}
 
-              {/* Tooltip */}
-              {collapsed && (
-                <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-slate-800 text-white text-xs font-semibold rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 whitespace-nowrap shadow-xl border border-slate-700 capitalize">
-                  {item.label}
-                </span>
-              )}
-            </Link>
-          );
-        })}
+                  {/* Tooltip */}
+                  {collapsed && (
+                    <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-slate-800 text-white text-xs font-semibold rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 whitespace-nowrap shadow-xl border border-slate-700 capitalize">
+                      {item.label}
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
+          </div>
+        ))}
       </nav>
     </div>
 
@@ -131,7 +153,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const [isMounted, setIsMounted] = useState(false);
 
   const filteredNavItems = useMemo(() => {
-    return NAV_ITEMS;
+    return NAV_SECTIONS;
   }, []);
 
   const handleLogout = () => {

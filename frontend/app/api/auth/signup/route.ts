@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import { createAdminClient } from '@/utils/supabase/admin';
 import { prisma } from '@/lib/prisma';
-import { sendWelcomeEmail } from '@/lib/mail';
+import { sendVerificationEmail } from '@/lib/mail';
+import crypto from 'crypto';
 
 export async function POST(request: Request) {
   try {
@@ -27,6 +28,7 @@ export async function POST(request: Request) {
     }
 
     if (data.user) {
+      const verificationToken = crypto.randomBytes(32).toString('hex');
       // 2. Create user in Prisma
       await prisma.user.create({
         data: {
@@ -34,11 +36,12 @@ export async function POST(request: Request) {
           email: data.user.email!,
           role: 'USER',
           isVerified: false,
+          verificationToken,
         }
       });
+      
+      sendVerificationEmail(email, verificationToken).catch(console.error);
     }
-
-    sendWelcomeEmail(email).catch(console.error);
 
     return NextResponse.json({ user: data.user }, { status: 201 });
   } catch (error) {
