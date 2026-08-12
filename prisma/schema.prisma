@@ -101,3 +101,14 @@ model CameraSetting {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 }
+
+model SubscriptionPlan {
+  id          String   @id @default(uuid())
+  name        String
+  description String
+  price       Float
+  features    String[]
+  isPopular   Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
