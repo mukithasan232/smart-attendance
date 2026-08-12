@@ -1,10 +1,8 @@
 import { NextResponse } from 'next/server';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@/lib/prisma';
 import { encrypt } from '@/lib/encryption';
 import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
-
-const prisma = new PrismaClient();
 
 // Only ADMINs should access this
 async function checkAdmin() {
