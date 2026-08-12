@@ -135,7 +135,7 @@ export default function LoginPage() {
             </div>
           )}
           <h2 className="text-4xl lg:text-5xl font-extrabold text-white tracking-tight mb-4">{branding.appName}</h2>
-          <p className="text-lg lg:text-xl text-indigo-200 font-medium max-w-md" style={{ color: 'var(--accent-indigo)' }}>
+          <p className="text-lg lg:text-xl text-white/90 font-medium max-w-md">
             {branding.tagline}
           </p>
         </div>
