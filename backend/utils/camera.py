@@ -119,7 +119,7 @@ class RTSPCamera:
         """Background thread: grab + skip + resize + enqueue."""
         grab_count = 0
         last_frame_time = 0.0
-        reconnect_delay = 2.0  # seconds
+        reconnect_delay = 5.0  # seconds
 
         while self._running:
             # ── FPS limiter ─────────────────────────────────────────────────

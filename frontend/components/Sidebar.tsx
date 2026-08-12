@@ -4,7 +4,8 @@ import { usePathname } from 'next/navigation';
 import {
   LayoutDashboard, Users, Settings, X, ChevronLeft, ChevronRight, Video, List, LogOut, ShieldAlert
 } from 'lucide-react';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
+import { useAuth } from '@/components/providers/AuthContext';
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', href: '/', icon: LayoutDashboard },
@@ -19,10 +20,121 @@ interface SidebarProps {
   onClose?: () => void;
 }
 
+const SidebarContent = ({ 
+  collapsed, 
+  isCollapsed,
+  mobileOpen, 
+  onClose, 
+  pathname, 
+  filteredNavItems, 
+  handleLogout, 
+  toggleSidebar 
+}: any) => (
+  <div className="flex flex-col h-full overflow-hidden">
+    {/* Header */}
+    <div className={`h-16 w-full flex-shrink-0 flex items-center ${collapsed ? 'justify-center' : 'justify-start'} overflow-hidden border-b border-slate-200 dark:border-white/10 px-5 transition-all`}>
+      <div className="flex items-center gap-2.5 min-w-0 overflow-hidden h-full w-full">
+        {collapsed ? (
+          <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-extrabold text-lg shadow-md flex-shrink-0">
+            <ShieldAlert size={18} />
+          </div>
+        ) : (
+          <>
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-extrabold text-lg shadow-md flex-shrink-0">
+              <ShieldAlert size={18} />
+            </div>
+            <span className="text-slate-800 dark:text-white font-extrabold text-lg sm:text-xl tracking-tight block py-1 sm:py-2 text-left leading-tight truncate w-full flex items-center overflow-hidden">
+              SecureVision ERP
+            </span>
+          </>
+        )}
+      </div>
+
+      {/* Mobile Close Button */}
+      {mobileOpen && onClose && (
+        <button onClick={onClose} className="md:hidden p-1 text-slate-500 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white flex-shrink-0 ml-auto">
+          <X className="w-5 h-5" />
+        </button>
+      )}
+    </div>
+
+    {/* Nav Items Container */}
+    <div className="flex-1 overflow-y-auto w-full">
+      <nav className="px-3 mt-4 space-y-1">
+        {filteredNavItems.map((item: any) => {
+          const isActive = pathname === item.href || (item.href !== '/' && (pathname?.startsWith(item.href) ?? false));
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.key}
+              href={item.href}
+              onClick={onClose}
+              className={`flex items-center gap-3 py-2.5 rounded-xl transition-all text-sm font-medium group relative ${isActive
+                  ? 'bg-indigo-500/10 text-indigo-600 dark:text-white border border-indigo-500/20 shadow-sm shadow-indigo-500/20'
+                  : 'text-slate-600 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
+                } ${collapsed ? 'justify-center px-0 mx-2' : 'px-4'}`}
+            >
+              <Icon
+                className={`h-5 w-5 flex-shrink-0 transition-colors ${isActive ? 'text-indigo-600 dark:text-white' : 'text-slate-400 dark:text-gray-400 group-hover:text-slate-900 dark:group-hover:text-white'
+                  }`}
+              />
+              {!collapsed && <span className="capitalize">{item.label}</span>}
+              {!collapsed && isActive && (
+                <span className="ml-auto h-1.5 w-1.5 rounded-full flex-shrink-0 bg-indigo-600" />
+              )}
+
+              {/* Tooltip */}
+              {collapsed && (
+                <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-slate-800 text-white text-xs font-semibold rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 whitespace-nowrap shadow-xl border border-slate-700 capitalize">
+                  {item.label}
+                </span>
+              )}
+            </Link>
+          );
+        })}
+      </nav>
+    </div>
+
+    {/* Footer */}
+    <div className={`p-3 border-t border-slate-200 dark:border-white/10 flex flex-col gap-2 ${collapsed ? 'items-center' : ''}`}>
+      <button
+        onClick={handleLogout}
+        className={`flex items-center gap-3 py-2.5 rounded-xl transition-all text-sm font-medium text-slate-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 ${collapsed ? 'justify-center px-0 mx-2' : 'px-4'}`}
+        title={collapsed ? "Log Out" : undefined}
+      >
+        <LogOut className="h-5 w-5 flex-shrink-0" />
+        {!collapsed && <span>Log Out</span>}
+      </button>
+
+      {/* Toggle Button for Desktop */}
+      {!mobileOpen && (
+        <button
+          onClick={toggleSidebar}
+          className="p-2.5 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 transition-all flex items-center justify-center w-full"
+          title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
+        >
+          {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
+        </button>
+      )}
+    </div>
+  </div>
+);
+
 export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const pathname = usePathname();
+  const { role } = useAuth();
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [isMounted, setIsMounted] = useState(false);
+
+  const filteredNavItems = useMemo(() => {
+    return NAV_ITEMS.filter(item => {
+      // Hide Persons and Settings for non-admins
+      if ((item.key === 'settings' || item.key === 'persons') && role !== 'ADMIN') {
+        return false;
+      }
+      return true;
+    });
+  }, [role]);
 
   const handleLogout = () => {
     document.cookie = "auth-token=; path=/; max-age=0";
@@ -49,97 +161,6 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
 
   const collapsed = !mobileOpen && isCollapsed;
 
-  const SidebarContent = () => (
-    <div className="flex flex-col h-full overflow-hidden">
-      {/* Header */}
-      <div className={`h-16 w-full flex-shrink-0 flex items-center ${collapsed ? 'justify-center' : 'justify-start'} overflow-hidden border-b border-slate-200 dark:border-white/10 px-5 transition-all`}>
-        <div className="flex items-center gap-2.5 min-w-0 overflow-hidden h-full w-full">
-          {collapsed ? (
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-extrabold text-lg shadow-md flex-shrink-0">
-              <ShieldAlert size={18} />
-            </div>
-          ) : (
-            <>
-              <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-extrabold text-lg shadow-md flex-shrink-0">
-                <ShieldAlert size={18} />
-              </div>
-              <span className="text-slate-800 dark:text-white font-extrabold text-lg sm:text-xl tracking-tight block py-1 sm:py-2 text-left leading-tight truncate w-full flex items-center overflow-hidden">
-                SecureVision ERP
-              </span>
-            </>
-          )}
-        </div>
-
-        {/* Mobile Close Button */}
-        {mobileOpen && onClose && (
-          <button onClick={onClose} className="md:hidden p-1 text-slate-500 hover:text-slate-900 dark:text-gray-400 dark:hover:text-white flex-shrink-0 ml-auto">
-            <X className="w-5 h-5" />
-          </button>
-        )}
-      </div>
-
-      {/* Nav Items Container */}
-      <div className="flex-1 overflow-y-auto w-full">
-        <nav className="px-3 mt-4 space-y-1">
-          {NAV_ITEMS.map(item => {
-            const isActive = pathname === item.href || (item.href !== '/' && (pathname?.startsWith(item.href) ?? false));
-            const Icon = item.icon;
-            return (
-              <Link
-                key={item.key}
-                href={item.href}
-                onClick={onClose}
-                className={`flex items-center gap-3 py-2.5 rounded-xl transition-all text-sm font-medium group relative ${isActive
-                    ? 'bg-indigo-500/10 text-indigo-600 dark:text-white border border-indigo-500/20 shadow-sm shadow-indigo-500/20'
-                    : 'text-slate-600 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-white/5 hover:text-slate-900 dark:hover:text-white'
-                  } ${collapsed ? 'justify-center px-0 mx-2' : 'px-4'}`}
-              >
-                <Icon
-                  className={`h-5 w-5 flex-shrink-0 transition-colors ${isActive ? 'text-indigo-600 dark:text-white' : 'text-slate-400 dark:text-gray-400 group-hover:text-slate-900 dark:group-hover:text-white'
-                    }`}
-                />
-                {!collapsed && <span className="capitalize">{item.label}</span>}
-                {!collapsed && isActive && (
-                  <span className="ml-auto h-1.5 w-1.5 rounded-full flex-shrink-0 bg-indigo-600" />
-                )}
-
-                {/* Tooltip */}
-                {collapsed && (
-                  <span className="absolute left-full ml-3 px-2.5 py-1.5 bg-slate-800 text-white text-xs font-semibold rounded-md opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-50 whitespace-nowrap shadow-xl border border-slate-700 capitalize">
-                    {item.label}
-                  </span>
-                )}
-              </Link>
-            );
-          })}
-        </nav>
-      </div>
-
-      {/* Footer */}
-      <div className={`p-3 border-t border-slate-200 dark:border-white/10 flex flex-col gap-2 ${collapsed ? 'items-center' : ''}`}>
-        <button
-          onClick={handleLogout}
-          className={`flex items-center gap-3 py-2.5 rounded-xl transition-all text-sm font-medium text-slate-500 hover:text-red-500 dark:text-gray-400 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 ${collapsed ? 'justify-center px-0 mx-2' : 'px-4'}`}
-          title={collapsed ? "Log Out" : undefined}
-        >
-          <LogOut className="h-5 w-5 flex-shrink-0" />
-          {!collapsed && <span>Log Out</span>}
-        </button>
-
-        {/* Toggle Button for Desktop */}
-        {!mobileOpen && (
-          <button
-            onClick={toggleSidebar}
-            className="p-2.5 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-200 dark:text-gray-400 dark:hover:text-white dark:hover:bg-white/10 transition-all flex items-center justify-center w-full"
-            title={isCollapsed ? "Expand Sidebar" : "Collapse Sidebar"}
-          >
-            {isCollapsed ? <ChevronRight className="w-5 h-5" /> : <ChevronLeft className="w-5 h-5" />}
-          </button>
-        )}
-      </div>
-    </div>
-  );
-
   if (!isMounted) {
     return (
       <aside className={`hidden md:flex ${isCollapsed ? 'w-20' : 'w-64'} border-r border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-black/40 backdrop-blur-lg flex-col h-screen flex-shrink-0 transition-all duration-300 ease-in-out z-40`}>
@@ -159,7 +180,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
     <>
       {/* Desktop Sidebar */}
       <aside className={`hidden md:flex ${isCollapsed ? 'w-20' : 'w-64'} border-r border-slate-200 dark:border-white/10 bg-slate-50/70 dark:bg-black/40 backdrop-blur-lg flex-col h-screen flex-shrink-0 transition-all duration-300 ease-in-out z-40`}>
-        <SidebarContent />
+        <SidebarContent collapsed={collapsed} isCollapsed={isCollapsed} mobileOpen={mobileOpen} onClose={onClose} pathname={pathname} filteredNavItems={filteredNavItems} handleLogout={handleLogout} toggleSidebar={toggleSidebar} />
       </aside>
 
       {/* Mobile Drawer */}
@@ -173,7 +194,7 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
         <aside
           className={`absolute left-0 top-0 bottom-0 w-72 bg-white dark:bg-slate-950 border-r border-slate-200 dark:border-white/10 flex flex-col transition-transform duration-300 ease-in-out ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
         >
-          <SidebarContent />
+          <SidebarContent collapsed={collapsed} isCollapsed={isCollapsed} mobileOpen={mobileOpen} onClose={onClose} pathname={pathname} filteredNavItems={filteredNavItems} handleLogout={handleLogout} toggleSidebar={toggleSidebar} />
         </aside>
       </div>
     </>

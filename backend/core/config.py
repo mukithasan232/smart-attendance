@@ -17,6 +17,8 @@ load_dotenv(dotenv_path=Path(__file__).parent.parent.parent / ".env")
 
 # ── Camera ─────────────────────────────────────────────────────────────────────
 RTSP_URL: str = os.getenv("RTSP_URL", "0")
+CAMERA_SOURCE: str = os.getenv("CAMERA_SOURCE", RTSP_URL)
+CAMERA_MODE: str = os.getenv("CAMERA_MODE", "live")
 FRAME_SKIP: int = int(os.getenv("FRAME_SKIP", "4"))
 RTSP_RESIZE_WIDTH: int = int(os.getenv("RTSP_RESIZE_WIDTH", "640"))
 RTSP_MAX_FPS: int = int(os.getenv("RTSP_MAX_FPS", "15"))

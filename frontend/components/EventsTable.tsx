@@ -5,8 +5,10 @@
 import { useEffect, useState, useCallback } from "react";
 import { getEvents, snapshotUrl, registerPersonFromEvent, DetectionEvent } from "@/lib/api";
 import { RefreshCw, ShieldCheck, ShieldAlert, Eye, UserPlus, CheckCircle, AlertCircle } from "lucide-react";
+import { useAuth } from "@/components/providers/AuthContext";
 
 export default function EventsTable() {
+  const { role } = useAuth();
   const [events, setEvents] = useState<DetectionEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedSnapshot, setSelectedSnapshot] = useState<string | null>(null);
@@ -190,7 +192,7 @@ export default function EventsTable() {
 
                       {/* Action */}
                       <td>
-                        {ev.status === "Unknown" && ev.buffer_status !== "added" && (
+                        {role === 'ADMIN' && ev.status === "Unknown" && ev.buffer_status !== "added" && (
                           <button
                             className="btn-secondary text-xs py-1 px-2"
                             onClick={() => handleMakeKnown(ev.id, ev.snapshot_path)}

@@ -1,46 +1,7 @@
-generator client {
-  provider = "prisma-client-js"
-}
+with open("prisma/schema.prisma", "r") as f:
+    content = f.read()
 
-datasource db {
-  provider = "postgresql"
-}
-
-enum Role {
-  ADMIN
-  USER
-}
-
-model User {
-  id         String   @id
-  email      String   @unique
-  role       Role     @default(USER)
-  isVerified Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  passwordResetToken   String? 
-  passwordResetExpires DateTime?
-  bills                Bill[]
-  transactions         Transaction[]
-}
-
-model Client {
-  id        String   @id @default(uuid())
-  name      String
-  subdomain String   @unique
-  plan      String   @default("Starter")
-  status    String   @default("Active")
-  users     Int      @default(0)
-  joinedAt  DateTime @default(now())
-}
-
-
-model NewsletterSubscriber {
-  id           String   @id @default(uuid())
-  email        String   @unique
-  subscribedAt DateTime @default(now())
-  isActive     Boolean  @default(true)
-}
-
+billing_models = """
 
 enum PaymentStatus {
   PENDING
@@ -87,3 +48,18 @@ model Transaction {
   bill          Bill          @relation(fields: [billId], references: [id])
   user          User          @relation(fields: [userId], references: [id])
 }
+"""
+
+# Need to append user relation `bills Bill[]` and `transactions Transaction[]` to User model
+if "bills          Bill[]" not in content:
+    import re
+    user_regex = re.compile(r"(model User \{.*?)(^\})", re.DOTALL | re.MULTILINE)
+    replacement = r"\1  bills                Bill[]\n  transactions         Transaction[]\n\2"
+    content = user_regex.sub(replacement, content)
+
+if "model PaymentGateway" not in content:
+    content += billing_models
+
+with open("prisma/schema.prisma", "w") as f:
+    f.write(content)
+

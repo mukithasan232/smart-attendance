@@ -12,7 +12,7 @@ from contextlib import asynccontextmanager
 import asyncpg
 import ast
 from supabase import create_client, Client
-from backend.core.config import DATABASE_URL, UNKNOWN_ALERT_COOLDOWN, SUPABASE_URL, SUPABASE_KEY
+from backend.core.config import DATABASE_URL, UNKNOWN_ALERT_COOLDOWN, SUPABASE_URL, SUPABASE_KEY, CAMERA_SOURCE, CAMERA_MODE
 
 # Init Supabase Client (Only used for Storage now)
 supabase: Client | None = None
@@ -23,7 +23,12 @@ if SUPABASE_URL and SUPABASE_KEY:
     except Exception as e:
         logger.error(f"Failed to initialize Supabase client: {e}")
 
-from backend.inference.yolov8_seg_onnx import YOLOv8Segmentation_onnx
+from backend.inference.engine import YOLOEngine
+from backend.inference.yolo_world import YOLOWorldEngine
+import os
+from backend.inference.transform.utils import draw_ultralytics_results
+from backend.utils.camera import RTSPCamera
+from backend.inference.transform.utils import compute_iou
 from backend.inference.face_recognizer import InsightFaceRecognizer
 from concurrent.futures import ThreadPoolExecutor
 import datetime
@@ -65,7 +70,21 @@ async def lifespan(app: FastAPI):
             
     except Exception as e:
         logger.error(f"Failed to initialize asyncpg pool: {e}")
+        
+    global CAMERA_GLOBAL_TASK
+    CAMERA_GLOBAL_TASK = main_loop.run_in_executor(background_executor, global_inference_loop)
+    logger.info("Global Camera Inference Loop started.")
+    
     yield
+    
+    global GLOBAL_CAMERA_RUNNING, GLOBAL_CAMERA
+    GLOBAL_CAMERA_RUNNING = False
+    if GLOBAL_CAMERA:
+        GLOBAL_CAMERA.stop()
+    if CAMERA_GLOBAL_TASK:
+        # We don't await the ThreadPool task directly, it will finish on GLOBAL_CAMERA_RUNNING = False
+        pass
+        
     if db_pool:
         await db_pool.close()
         logger.info("asyncpg database pool closed.")
@@ -98,20 +117,18 @@ def health_check():
     """Health check endpoint to verify the API is running."""
     return {"status": "ok", "message": "SecureVision CV Backend is running", "db_connected": db_pool is not None}
 
-# Init YOLOv8 ONNX Model
+# Init YOLOv8 Optimized Engine (YOLO-World Zero-Shot by default)
 yolo_model = None
 try:
-    # Use dynamic absolute path to models directory or relative if running from root
-    model_path = os.path.join(os.path.dirname(__file__), "models", "yolov8n-seg.onnx")
-    
-    # Check if files exist before initializing to prevent fatal crashes
-    if os.path.exists(model_path):
-        yolo_model = YOLOv8Segmentation_onnx(model_path)
-        logger.info(f"YOLOv8 ONNX Segmentation engine initialized successfully from {model_path}.")
+    # Use YOLO-World if requested, else fallback to standard YOLO segmentation
+    if os.getenv("USE_STANDARD_YOLO", "0") == "1":
+        yolo_model = YOLOEngine("yolov8n-seg")
+        logger.info("YOLOv8 Standard engine initialized successfully.")
     else:
-        logger.warning(f"ONNX model file not found at {model_path}. Inference disabled.")
+        yolo_model = YOLOWorldEngine()
+        logger.info("YOLO-World Zero-Shot engine initialized successfully.")
 except Exception as e:
-    logger.error(f"Failed to initialize YOLOv8 ONNX engine: {e}")
+    logger.error(f"Failed to initialize YOLO engine: {e}")
 
 # Init InsightFace Model
 face_recognizer = None
@@ -138,7 +155,7 @@ def load_cameras():
         except Exception:
             return []
     # Default fallback
-    return [{"id": "default-0", "name": "Built-in Webcam", "url": "0", "location": "Local", "enabled": True}]
+    return [{"id": "default-0", "name": "Primary Camera", "url": CAMERA_SOURCE, "location": "Local", "enabled": True}]
 
 def save_cameras(cams):
     with open(CAMERAS_FILE, "w") as f:
@@ -153,17 +170,15 @@ if _active:
 
 background_executor = ThreadPoolExecutor(max_workers=5)
 
-def compute_iou(box1, box2):
-    x1 = max(box1[0], box2[0])
-    y1 = max(box1[1], box2[1])
-    x2 = min(box1[2], box2[2])
-    y2 = min(box1[3], box2[3])
-    inter = max(0, x2 - x1) * max(0, y2 - y1)
-    if inter == 0:
-        return 0
-    area1 = (box1[2] - box1[0]) * (box1[3] - box1[1])
-    area2 = (box2[2] - box2[0]) * (box2[3] - box2[1])
-    return inter / float(area1 + area2 - inter)
+# Global Camera Streaming State
+LATEST_FRAME_BYTES = None
+CAMERA_GLOBAL_TASK = None
+GLOBAL_CAMERA = None
+GLOBAL_CAMERA_RUNNING = True
+
+
+
+
 
 async def async_unknown_alert(person_crop, timestamp):
     try:
@@ -197,17 +212,29 @@ async def async_unknown_alert(person_crop, timestamp):
     except Exception as e:
         logger.error(f"Async alert error: {e}")
 
-def generate_frames():
-    global IS_CAMERA_RUNNING, ACTIVE_CAMERA_URL
+
+def global_inference_loop():
+    global IS_CAMERA_RUNNING, ACTIVE_CAMERA_URL, LATEST_FRAME_BYTES, GLOBAL_CAMERA, GLOBAL_CAMERA_RUNNING
     current_url = ACTIVE_CAMERA_URL
     
-    # helper to parse "0" to int
-    def get_src(url):
-        return int(url) if str(url).isdigit() else url
+    # If mock mode, just output a static frame or skip hardware
+    if CAMERA_MODE.lower() == 'mock':
+        logger.info("CAMERA_MODE is mock. Not binding real hardware.")
+        # Create a blank image
+        img = np.zeros((480, 640, 3), dtype=np.uint8)
+        cv2.putText(img, "MOCK CAMERA ACTIVE", (100, 240), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+        ret, buffer = cv2.imencode('.jpg', img)
+        if ret:
+            LATEST_FRAME_BYTES = buffer.tobytes()
+        IS_CAMERA_RUNNING = True
+        while GLOBAL_CAMERA_RUNNING:
+            time.sleep(1)
+        return
 
     try:
-        camera = cv2.VideoCapture(get_src(current_url))
-        IS_CAMERA_RUNNING = camera.isOpened()
+        GLOBAL_CAMERA = RTSPCamera(url=current_url, max_fps=30)
+        GLOBAL_CAMERA.start()
+        IS_CAMERA_RUNNING = True
     except Exception as e:
         logger.error(f"Failed to open camera: {e}")
         IS_CAMERA_RUNNING = False
@@ -215,139 +242,128 @@ def generate_frames():
 
     try:
         frame_counter = 0
-        last_boxes, last_scores, last_class_ids, last_mask_maps = None, None, None, None
+        last_result = None
         last_recognized_names = []
         last_colors_override = []
         
-        tracked_faces = {} # {track_id: name}
-        last_track_boxes = [] # [(box, track_id)]
+        tracked_faces = {}
+        last_track_boxes = []
         next_track_id = 0
-        
         last_alert_time = 0
         
-        while True:
-            # Check for dynamic hot-switching
+        while GLOBAL_CAMERA_RUNNING:
             if current_url != ACTIVE_CAMERA_URL:
-                camera.release()
+                GLOBAL_CAMERA.stop()
                 current_url = ACTIVE_CAMERA_URL
-                camera = cv2.VideoCapture(get_src(current_url))
-                IS_CAMERA_RUNNING = camera.isOpened()
+                GLOBAL_CAMERA = RTSPCamera(url=current_url, max_fps=30)
+                GLOBAL_CAMERA.start()
+                IS_CAMERA_RUNNING = GLOBAL_CAMERA.is_running
                 if not IS_CAMERA_RUNNING:
                     time.sleep(1)
                     continue
 
-            success, frame = camera.read()
-            if not success or frame is None:
-                IS_CAMERA_RUNNING = False
-                time.sleep(0.5)
-                # Try reconnecting
-                camera = cv2.VideoCapture(get_src(current_url))
+            ok, frame = GLOBAL_CAMERA.read()
+            if not ok or frame is None:
+                time.sleep(0.01)
                 continue
                 
             IS_CAMERA_RUNNING = True
             frame_counter += 1
             
-            # Skip YOLO on odd frames for FPS boost, but still draw last known boxes
-            if frame_counter % 2 != 0 and last_boxes is not None and yolo_model is not None:
-                frame = yolo_model.draw_masks(frame, last_boxes, last_scores, last_class_ids, last_mask_maps, recognized_names=last_recognized_names, colors_override=last_colors_override)
+            if frame_counter % 2 != 0 and last_result is not None and yolo_model is not None:
+                frame = draw_ultralytics_results(frame, last_result, recognized_names=last_recognized_names, colors_override=last_colors_override)
                 ret, buffer = cv2.imencode('.jpg', frame)
                 if ret:
-                    yield (b'--frame\r\n' b'Content-Type: image/jpeg\r\n\r\n' + buffer.tobytes() + b'\r\n')
+                    LATEST_FRAME_BYTES = buffer.tobytes()
                 continue
                 
             try:
-                # Run ONNX inference on the frame
                 if yolo_model is not None:
-                    boxes, scores, class_ids, mask_maps = yolo_model.segment_objects(frame)
-                    
-                    recognized_names: list[str | None] = [None] * len(boxes)
-                    colors_override: list[tuple[int, int, int] | None] = [None] * len(boxes)
-                    current_track_boxes = []
-                    
-                    for i in range(len(boxes)):
-                        if int(class_ids[i]) == 0:
-                            box = [int(v) for v in boxes[i]]
-                            x1, y1, x2, y2 = box
-                            
-                            # Refine the bounding box using the actual segmentation mask for a perfect tight fit
-                            # This fixes cases where the YOLO model returns a huge/sloppy bounding box
-                            if mask_maps is not None and len(mask_maps) > i:
-                                mask = mask_maps[i]
-                                nz = np.nonzero(mask)
-                                if len(nz[0]) > 0:
-                                    y1, y2 = int(np.min(nz[0])), int(np.max(nz[0]))
-                                    x1, x2 = int(np.min(nz[1])), int(np.max(nz[1]))
-                                    box = [x1, y1, x2, y2]
-                                    boxes[i] = box # Overwrite for drawing later
-                            # Simple Tracker: find highest IoU in last_track_boxes
-                            best_iou = 0
-                            best_track_id = None
-                            for last_box, t_id in last_track_boxes:
-                                iou = compute_iou(box, last_box)
-                                if iou > 0.4 and iou > best_iou:
-                                    best_iou = iou
-                                    best_track_id = t_id
-                            
-                            if best_track_id is None:
-                                best_track_id = next_track_id
-                                next_track_id += 1
+                    result = yolo_model.predict(frame)
+                    if result and len(result.boxes) > 0:
+                        boxes = result.boxes.xyxy.cpu().numpy()
+                        class_ids = result.boxes.cls.cpu().numpy()
+                        recognized_names = [None] * len(boxes)
+                        colors_override = [None] * len(boxes)
+                        current_track_boxes = []
+                        
+                        for i in range(len(boxes)):
+                            if int(class_ids[i]) == 0:
+                                box = [int(v) for v in boxes[i]]
+                                x1, y1, x2, y2 = box
+                                best_iou = 0
+                                best_track_id = None
+                                if len(last_track_boxes) > 0:
+                                    last_boxes_arr = np.array([lb[0] for lb in last_track_boxes])
+                                    ious = compute_iou(np.array(box), last_boxes_arr)
+                                    best_idx = np.argmax(ious)
+                                    if ious[best_idx] > 0.4:
+                                        best_iou = ious[best_idx]
+                                        best_track_id = last_track_boxes[best_idx][1]
                                 
-                            current_track_boxes.append((box, best_track_id))
-                            
-                            # InsightFace every 15 frames OR if new person
-                            if face_recognizer is not None and (frame_counter % 15 == 0 or best_track_id not in tracked_faces):
-                                h, w = frame.shape[:2]
-                                margin_x = int((x2 - x1) * 0.1)
-                                margin_y = int((y2 - y1) * 0.1)
-                                cx1, cy1 = max(0, x1 - margin_x), max(0, y1 - margin_y)
-                                cx2, cy2 = min(w, x2 + margin_x), min(h, y2 + margin_y)
+                                if best_track_id is None:
+                                    best_track_id = next_track_id
+                                    next_track_id += 1
+                                    
+                                current_track_boxes.append((box, best_track_id))
                                 
-                                person_crop = frame[cy1:cy2, cx1:cx2]
-                                embedding = face_recognizer.extract_embedding(person_crop)
-                                
-                                if embedding is not None:
-                                    match, score = InsightFaceRecognizer.match_face(embedding, cached_persons, threshold=0.45)
-                                    if match:
-                                        tracked_faces[best_track_id] = match["name"]
+                                if face_recognizer is not None and (frame_counter % 15 == 0 or best_track_id not in tracked_faces):
+                                    h, w = frame.shape[:2]
+                                    margin_x = int((x2 - x1) * 0.1)
+                                    margin_y = int((y2 - y1) * 0.1)
+                                    cx1, cy1 = max(0, x1 - margin_x), max(0, y1 - margin_y)
+                                    cx2, cy2 = min(w, x2 + margin_x), min(h, y2 + margin_y)
+                                    person_crop = frame[cy1:cy2, cx1:cx2]
+                                    embedding = face_recognizer.extract_embedding(person_crop)
+                                    
+                                    if embedding is not None:
+                                        match, score = InsightFaceRecognizer.match_face(embedding, cached_persons, threshold=0.45)
+                                        if match:
+                                            tracked_faces[best_track_id] = match["name"]
+                                        else:
+                                            tracked_faces[best_track_id] = "Unknown"
+                                            current_time = time.time()
+                                            if current_time - last_alert_time > UNKNOWN_ALERT_COOLDOWN:
+                                                last_alert_time = current_time
+                                                if main_loop:
+                                                    asyncio.run_coroutine_threadsafe(async_unknown_alert(person_crop.copy(), datetime.datetime.now()), main_loop)
                                     else:
                                         tracked_faces[best_track_id] = "Unknown"
-                                        # Trigger async alert for Unknowns with cooldown
-                                        current_time = time.time()
-                                        if current_time - last_alert_time > UNKNOWN_ALERT_COOLDOWN:
-                                            last_alert_time = current_time
-                                            if main_loop:
-                                                asyncio.run_coroutine_threadsafe(async_unknown_alert(person_crop.copy(), datetime.datetime.now()), main_loop)
-                                else:
-                                    tracked_faces[best_track_id] = "Unknown"
-                            
-                            # Apply tracked name
-                            name = tracked_faces.get(best_track_id, "Unknown")
-                            recognized_names[i] = name
-                            if name == "Unknown":
-                                colors_override[i] = (0, 0, 255)
-                            else:
-                                colors_override[i] = (0, 255, 0)
                                 
-                    last_track_boxes = current_track_boxes
-                    last_boxes, last_scores, last_class_ids = boxes, scores, class_ids
-                    last_mask_maps, last_recognized_names, last_colors_override = mask_maps, recognized_names, colors_override
-                    
-                    frame = yolo_model.draw_masks(frame, boxes, scores, class_ids, mask_maps, recognized_names=recognized_names, colors_override=colors_override)
-                    
-                # Convert to MJPEG
+                                name = tracked_faces.get(best_track_id, "Unknown")
+                                recognized_names[i] = name
+                                if name == "Unknown":
+                                    colors_override[i] = (0, 0, 255)
+                                else:
+                                    colors_override[i] = (0, 255, 0)
+                                    
+                        last_track_boxes = current_track_boxes
+                        last_result = result
+                        last_recognized_names, last_colors_override = recognized_names, colors_override
+                        frame = draw_ultralytics_results(frame, result, recognized_names=recognized_names, colors_override=colors_override)
+                    else:
+                        last_result = None
+                        
                 ret, buffer = cv2.imencode('.jpg', frame)
-                if not ret:
-                    continue
-                    
-                frame_bytes = buffer.tobytes()
-                yield (b'--frame\r\n'
-                       b'Content-Type: image/jpeg\r\n\r\n' + frame_bytes + b'\r\n')
+                if ret:
+                    LATEST_FRAME_BYTES = buffer.tobytes()
             except Exception as e:
                 logger.error(f"Error in video pipeline frame processing: {e}")
                 time.sleep(0.1)
     finally:
-        camera.release()
+        if GLOBAL_CAMERA:
+            GLOBAL_CAMERA.stop()
         IS_CAMERA_RUNNING = False
+
+async def generate_frames():
+    while True:
+        if LATEST_FRAME_BYTES is not None:
+            yield (b'--frame
+' b'Content-Type: image/jpeg
+
+' + LATEST_FRAME_BYTES + b'
+')
+        await asyncio.sleep(0.033) # Max ~30fps stream to client
 
 @app.get("/api/stream")
 def video_feed():

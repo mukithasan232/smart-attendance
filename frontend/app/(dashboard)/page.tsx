@@ -11,6 +11,7 @@ import {
   ShieldCheck, ShieldAlert, RefreshCw,
 } from "lucide-react";
 import { getEvents, getStatus, DetectionEvent, SystemStatus } from "@/lib/api";
+import LiveCameraFeed from '@/components/LiveCameraFeed';
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -363,6 +364,11 @@ export default function DashboardPage() {
             ))}
           </div>
         </div>
+      </div>
+
+      {/* ── Live YOLOv8 Camera Feed ── */}
+      <div className="w-full">
+        <LiveCameraFeed className="w-full h-[500px]" baseUrl="http://localhost:8000" />
       </div>
 
       {/* ── Bottom row: Live Feed + Camera Status ── */}
