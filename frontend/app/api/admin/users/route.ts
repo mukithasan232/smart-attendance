@@ -13,7 +13,7 @@ async function requireAdmin() {
   }
 
   const role = user.app_metadata?.role;
-  if (role !== 'ADMIN') {
+  if (role !== 'ADMIN' && role !== 'SUPER_ADMIN') {
     return { error: 'Forbidden: Admin access required', status: 403 };
   }
 

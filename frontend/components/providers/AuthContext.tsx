@@ -6,7 +6,7 @@ import { User } from '@supabase/supabase-js';
 
 type AuthState = {
   user: User | null;
-  role: 'ADMIN' | 'USER' | null;
+  role: 'ADMIN' | 'USER' | 'SUPER_ADMIN' | null;
   isVerified: boolean;
   isLoading: boolean;
 };

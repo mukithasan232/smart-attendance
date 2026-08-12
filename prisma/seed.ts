@@ -2,6 +2,9 @@ import { PrismaClient } from '@prisma/client';
 import { Pool } from 'pg';
 import { PrismaPg } from '@prisma/adapter-pg';
 import { config } from 'dotenv';
+import { createClient } from '@supabase/supabase-js';
+import bcrypt from 'bcryptjs';
+
 config();
 
 const connectionString = `${process.env.DATABASE_URL}`;
@@ -9,8 +12,71 @@ const pool = new Pool({ connectionString });
 const adapter = new PrismaPg(pool);
 const prisma = new PrismaClient({ adapter });
 
+const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL || '';
+const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || '';
+const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
 async function main() {
   console.log('Seeding database...');
+
+  // 0. Seed SUPER_ADMIN
+  const adminEmail = 'admin@codernest.cloud';
+  const adminPassword = 'Admin123!';
+  const hashedPassword = await bcrypt.hash(adminPassword, 10);
+
+  console.log(`Ensuring ${adminEmail} exists in Supabase Auth...`);
+  
+  let adminAuthId = '';
+  
+  // Try to create the admin user in Supabase
+  const { data: authData, error: authError } = await supabase.auth.admin.createUser({
+    email: adminEmail,
+    password: adminPassword,
+    email_confirm: true,
+    user_metadata: { role: 'SUPER_ADMIN' },
+    app_metadata: { role: 'SUPER_ADMIN' }
+  });
+
+  if (authError && authError.message.includes('already exists')) {
+    console.log(`${adminEmail} already exists in Supabase Auth. Fetching ID...`);
+    const { data: usersData, error: usersError } = await supabase.auth.admin.listUsers();
+    if (!usersError && usersData?.users) {
+      const existingUser = usersData.users.find(u => u.email === adminEmail);
+      if (existingUser) {
+        adminAuthId = existingUser.id;
+        
+        // Update role if necessary
+        await supabase.auth.admin.updateUserById(adminAuthId, {
+          user_metadata: { role: 'SUPER_ADMIN' },
+          app_metadata: { role: 'SUPER_ADMIN' }
+        });
+      }
+    }
+  } else if (authData?.user) {
+    adminAuthId = authData.user.id;
+    console.log(`${adminEmail} created in Supabase Auth.`);
+  }
+
+  if (adminAuthId) {
+    await prisma.user.upsert({
+      where: { email: adminEmail },
+      update: {
+        role: 'SUPER_ADMIN',
+        password: hashedPassword,
+        isVerified: true
+      },
+      create: {
+        id: adminAuthId,
+        email: adminEmail,
+        role: 'SUPER_ADMIN',
+        password: hashedPassword,
+        isVerified: true
+      }
+    });
+    console.log(`Upserted ${adminEmail} into Prisma User table.`);
+  } else {
+    console.warn(`Failed to seed ${adminEmail} in Supabase Auth. Make sure SUPABASE_SERVICE_ROLE_KEY is set.`);
+  }
 
   // 1. Create mock users if none exist (so we can assign bills)
   let user1 = await prisma.user.findFirst({ where: { email: 'mockuser1@example.com' } });

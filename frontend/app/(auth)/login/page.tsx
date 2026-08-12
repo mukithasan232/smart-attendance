@@ -20,14 +20,25 @@ export default function LoginPage() {
 
     setIsLoading(true);
     try {
-      await new Promise((resolve) => setTimeout(resolve, 1500));
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+
+      const data = await res.json();
       
-      if (email === 'admin@codernest.cloud') {
-        document.cookie = "auth-token=secure-token-123; path=/; max-age=86400";
+      if (res.ok) {
         setToast({ message: 'Login successful! Redirecting...', type: 'success' });
-        window.location.href = '/';
+        const role = data.user?.app_metadata?.role || 'USER';
+        
+        if (role === 'SUPER_ADMIN' || role === 'ADMIN') {
+          window.location.href = '/dashboard'; // /dashboard is inside (super-admin)
+        } else {
+          window.location.href = '/'; // / is inside (dashboard)
+        }
       } else {
-        setToast({ message: 'Invalid credentials. Please try again.', type: 'error' });
+        setToast({ message: data.error || 'Invalid credentials. Please try again.', type: 'error' });
       }
     } catch {
       setToast({ message: 'Error logging in.', type: 'error' });

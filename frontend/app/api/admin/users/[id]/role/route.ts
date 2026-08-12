@@ -21,7 +21,7 @@ export async function PATCH(request: Request, { params }: { params: Promise<{ id
     // 2. Verify the requester is an ADMIN
     // We check from the database as a secondary strict check, though middleware already checked
     const requester = await prisma.user.findUnique({ where: { id: user.id } });
-    if (requester?.role !== 'ADMIN') {
+    if (requester?.role !== 'ADMIN' && requester?.role !== 'SUPER_ADMIN') {
       return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
     }
 

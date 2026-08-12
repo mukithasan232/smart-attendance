@@ -7,20 +7,23 @@ datasource db {
 }
 
 enum Role {
+  SUPER_ADMIN
   ADMIN
   USER
 }
 
 model User {
-  id         String   @id
-  email      String   @unique
-  role       Role     @default(USER)
-  isVerified Boolean  @default(false)
-  createdAt  DateTime @default(now())
-  passwordResetToken   String? 
+  id                   String        @id
+  email                String        @unique
+  password             String?
+  role                 Role          @default(USER)
+  isVerified           Boolean       @default(false)
+  createdAt            DateTime      @default(now())
+  passwordResetToken   String?
   passwordResetExpires DateTime?
   bills                Bill[]
   transactions         Transaction[]
+  clients              Client[]
 }
 
 model Client {
@@ -28,12 +31,13 @@ model Client {
   name       String
   subdomain  String   @unique
   adminEmail String?
-  plan      String   @default("Starter")
-  status    String   @default("Active")
-  users     Int      @default(0)
-  joinedAt  DateTime @default(now())
+  adminId    String?
+  admin      User?    @relation(fields: [adminId], references: [id], onDelete: SetNull)
+  plan       String   @default("Starter")
+  status     String   @default("Active")
+  users      Int      @default(0)
+  joinedAt   DateTime @default(now())
 }
-
 
 model NewsletterSubscriber {
   id           String   @id @default(uuid())
@@ -41,7 +45,6 @@ model NewsletterSubscriber {
   subscribedAt DateTime @default(now())
   isActive     Boolean  @default(true)
 }
-
 
 enum PaymentStatus {
   PENDING
@@ -70,8 +73,8 @@ model Bill {
   description String?
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
-  
-  user        User          @relation(fields: [userId], references: [id])
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions Transaction[]
 }
 
@@ -80,13 +83,13 @@ model Transaction {
   billId        String
   userId        String
   gatewayUsed   String
-  transactionId String?       // ID returned by the gateway
+  transactionId String? // ID returned by the gateway
   amount        Float
   status        PaymentStatus @default(PENDING)
   createdAt     DateTime      @default(now())
-  
-  bill          Bill          @relation(fields: [billId], references: [id])
-  user          User          @relation(fields: [userId], references: [id])
+
+  bill Bill @relation(fields: [billId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model CameraSetting {

@@ -7,11 +7,14 @@ import {
 import { useState, useEffect } from 'react';
 
 const NAV_ITEMS = [
-  { key: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { key: 'clients', label: 'Clients / Tenants', href: '/clients', icon: Building },
-  { key: 'plans', label: 'Subscription Plans', href: '/plans', icon: CreditCard },
-  { key: 'billing', label: 'Billing & Payments', href: '/billing', icon: Receipt },
-  { key: 'health', label: 'System Health', href: '/health', icon: Activity },
+  { key: 'dashboard', label: 'Dashboard', href: '/super-admin/dashboard', icon: LayoutDashboard },
+  { key: 'clients', label: 'Clients / Tenants', href: '/super-admin/clients', icon: Building },
+  { key: 'team', label: 'Admin Team', href: '/super-admin/team', icon: ShieldAlert },
+  { key: 'plans', label: 'Subscription Plans', href: '/super-admin/plans', icon: CreditCard },
+  { key: 'billing', label: 'Billing & Payments', href: '/super-admin/billing', icon: Receipt },
+  { key: 'health', label: 'System Health', href: '/super-admin/health', icon: Activity },
+  { key: 'integrations', label: 'Integrations', href: '/super-admin/integrations', icon: ShieldAlert },
+  { key: 'settings', label: 'Settings', href: '/super-admin/settings', icon: ShieldAlert },
 ];
 
 interface SidebarProps {

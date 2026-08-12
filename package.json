@@ -7,6 +7,7 @@
   },
   "devDependencies": {
     "@prisma/adapter-pg": "^7.9.1",
+    "@types/bcryptjs": "^2.4.6",
     "@types/pg": "^8.21.0",
     "concurrently": "^10.0.4",
     "dotenv": "^17.4.2",
@@ -16,7 +17,9 @@
   },
   "dependencies": {
     "@prisma/client": "^7.9.1",
-    "@vercel/analytics": "^2.0.1"
+    "@supabase/supabase-js": "^2.112.3",
+    "@vercel/analytics": "^2.0.1",
+    "bcryptjs": "^3.0.3"
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"

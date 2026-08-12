@@ -2,17 +2,16 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, Users, Settings, X, ChevronLeft, ChevronRight, Video, List, LogOut, ShieldAlert
+  LayoutDashboard, Users, Settings, X, ChevronLeft, ChevronRight, Video, List, LogOut, ShieldAlert, Plug
 } from 'lucide-react';
 import { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '@/components/providers/AuthContext';
 
 const NAV_ITEMS = [
-  { key: 'dashboard', label: 'Dashboard', href: '/', icon: LayoutDashboard },
+  { key: 'dashboard', label: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { key: 'live', label: 'Live Monitor', href: '/live', icon: Video },
   { key: 'logs', label: 'Visitor Logs', href: '/logs', icon: List },
   { key: 'persons', label: 'Persons', href: '/persons', icon: Users },
-  { key: 'settings', label: 'Settings', href: '/settings', icon: Settings },
 ];
 
 interface SidebarProps {
@@ -127,14 +126,8 @@ export default function Sidebar({ mobileOpen, onClose }: SidebarProps) {
   const [isMounted, setIsMounted] = useState(false);
 
   const filteredNavItems = useMemo(() => {
-    return NAV_ITEMS.filter(item => {
-      // Hide Persons and Settings for non-admins
-      if ((item.key === 'settings' || item.key === 'persons') && role !== 'ADMIN') {
-        return false;
-      }
-      return true;
-    });
-  }, [role]);
+    return NAV_ITEMS;
+  }, []);
 
   const handleLogout = () => {
     document.cookie = "auth-token=; path=/; max-age=0";
