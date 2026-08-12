@@ -14,7 +14,7 @@ type UserData = {
 };
 
 // --- Portal-based Action Menu ---
-function ActionMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => void; }) {
+function ActionMenu({ onEdit, onDelete, onImpersonate, isImpersonating }: { onEdit: () => void; onDelete: () => void; onImpersonate: () => void; isImpersonating?: boolean; }) {
   const [isOpen, setIsOpen] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const [coords, setCoords] = useState({ top: 0, left: 0, width: 0 });
@@ -52,10 +52,13 @@ function ActionMenu({ onEdit, onDelete }: { onEdit: () => void; onDelete: () => 
       </button>
       {isOpen && typeof document !== 'undefined' && createPortal(
         <div 
-          className="absolute z-[9999] bg-white rounded-lg shadow-xl border border-slate-100 w-36 overflow-hidden py-1"
+          className="absolute z-[9999] bg-white rounded-lg shadow-xl border border-slate-100 w-44 overflow-hidden py-1"
           style={{ top: coords.top + 4, left: coords.left - 136 + coords.width }}
           onClick={(e) => e.stopPropagation()}
         >
+          <button onClick={() => { setIsOpen(false); onImpersonate(); }} className="w-full px-4 py-2 text-left text-sm text-indigo-600 font-semibold hover:bg-indigo-50 flex items-center gap-2" disabled={isImpersonating}>
+            {isImpersonating ? <Loader2 size={14} className="animate-spin" /> : <Shield size={14} />} Login as User
+          </button>
           <button onClick={() => { setIsOpen(false); onEdit(); }} className="w-full px-4 py-2 text-left text-sm hover:bg-slate-50 flex items-center gap-2">
             <Edit2 size={14} /> Assign Plan
           </button>
@@ -75,6 +78,7 @@ export default function UsersManagementPage() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [toast, setToast] = useState<{ msg: string; type: 'success' | 'error' } | null>(null);
+  const [impersonatingId, setImpersonatingId] = useState<string | null>(null);
 
   const showToast = (msg: string, type: 'success' | 'error') => {
     setToast({ msg, type });
@@ -103,6 +107,28 @@ export default function UsersManagementPage() {
   useEffect(() => {
     fetchUsers();
   }, [fetchUsers]);
+
+  const handleImpersonate = async (id: string) => {
+    setImpersonatingId(id);
+    try {
+      const res = await fetch(`/api/admin/users/${id}/impersonate`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        if (data.action_link) {
+           showToast('Impersonation successful! Redirecting...', 'success');
+           window.location.href = data.action_link;
+        } else {
+           throw new Error('No action link provided');
+        }
+      } else {
+        const err = await res.json();
+        throw new Error(err.error || 'Failed to impersonate user');
+      }
+    } catch (err: any) {
+      showToast(err.message, 'error');
+      setImpersonatingId(null);
+    }
+  };
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this user? This cannot be undone.')) return;
@@ -212,6 +238,8 @@ export default function UsersManagementPage() {
                       <ActionMenu 
                         onEdit={() => showToast('Plan assignment UI placeholder', 'success')} 
                         onDelete={() => handleDelete(user.id)} 
+                        onImpersonate={() => handleImpersonate(user.id)}
+                        isImpersonating={impersonatingId === user.id}
                       />
                     </td>
                   </tr>
