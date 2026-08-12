@@ -7,8 +7,7 @@ import {
   Pencil, Play, Wifi, WifiOff, AlertTriangle, X,
 } from 'lucide-react';
 import {
-  getNotificationSettings, saveNotificationSettings, testEmailConnection, SmtpSettings,
-  getCameras, addCamera, updateCamera, deleteCamera, applyCamera, CameraConfig,
+  getCameras, addCamera, updateCamera, deleteCamera, applyCamera, CameraConfig, SmtpSettings
 } from '@/lib/api';
 
 type Tab = 'camera' | 'notifications' | 'ai' | 'database' | 'integrations';
@@ -207,6 +206,7 @@ function DeleteModal({ name, onConfirm, onClose, isDeleting }: {
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState<Tab>('camera');
   const [isLoading, setIsLoading] = useState(false);
+  const [smtpLoading, setSmtpLoading] = useState(false);
   const [isTestingConnection, setIsTestingConnection] = useState(false);
   const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
@@ -374,7 +374,6 @@ export default function SettingsPage() {
   };
 
   // ── SMTP tab state ──────────────────────────────────────────────────────────
-  const [smtpLoading, setSmtpLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [smtp, setSmtp] = useState<SmtpSettings>({
     enabled: false, host: 'smtp.gmail.com', port: 587, use_tls: true,
@@ -386,9 +385,12 @@ export default function SettingsPage() {
     if (activeTab !== 'integrations') return;
     // eslint-disable-next-line
     setSmtpLoading(true);
-    getNotificationSettings()
-      .then(data => setSmtp(data.smtp))
-      .catch(() => {})
+    fetch('/api/admin/settings/email')
+      .then(res => res.json())
+      .then(data => {
+        if (data.smtp) setSmtp(data.smtp);
+      })
+      .catch(console.error)
       .finally(() => setSmtpLoading(false));
   }, [activeTab]);
 
@@ -409,10 +411,15 @@ export default function SettingsPage() {
   const handleSmtpSave = async () => {
     setIsLoading(true);
     try {
-      await saveNotificationSettings(smtp);
+      const res = await fetch('/api/admin/settings/email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(smtp)
+      });
+      if (!res.ok) throw new Error('Failed to save settings');
       showToast('SMTP settings saved successfully.', 'success');
-    } catch (err: unknown) {
-      showToast((err as Error).message || 'Failed to save settings.', 'error');
+    } catch (err) {
+      showToast('Failed to save SMTP settings.', 'error');
     } finally {
       setIsLoading(false);
     }
@@ -421,10 +428,19 @@ export default function SettingsPage() {
   const handleTestEmail = async () => {
     setIsTestingConnection(true);
     try {
-      const res = await testEmailConnection();
-      showToast(res.message, 'success');
-    } catch (err: unknown) {
-      showToast((err as Error).message || 'Test email failed.', 'error');
+      const res = await fetch('/api/admin/settings/email/test', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(smtp)
+      });
+      const data = await res.json();
+      if (res.ok) {
+        showToast('Test email sent successfully!', 'success');
+      } else {
+        showToast(data.error || 'Failed to send test email', 'error');
+      }
+    } catch (err) {
+      showToast('Failed to send test email', 'error');
     } finally {
       setIsTestingConnection(false);
     }
