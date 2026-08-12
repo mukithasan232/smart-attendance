@@ -46,7 +46,8 @@ export async function POST(
        return NextResponse.json({ error: 'Cannot impersonate another SUPER_ADMIN' }, { status: 403 });
     }
 
-    const origin = request.headers.get('origin') || process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000';
+    const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://vision.codernest.cloud';
+    const redirectUrl = `${baseUrl}/dashboard`;
 
     // Generate an admin magic link for the target user's email
     const supabaseAdmin = createAdminClient();
@@ -54,8 +55,8 @@ export async function POST(
       type: 'magiclink',
       email: targetUser.email,
       options: {
-        redirectTo: `${origin}/dashboard`
-      }
+        redirectTo: redirectUrl,
+      },
     });
 
     if (error || !data?.properties?.action_link) {
