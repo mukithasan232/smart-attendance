@@ -2,13 +2,16 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import {
-  LayoutDashboard, Building, CreditCard, Receipt, Activity, X, ChevronLeft, ChevronRight, LogOut, ShieldAlert
+  LayoutDashboard, Building, CreditCard, Receipt, Activity, X, ChevronLeft, ChevronRight, LogOut, ShieldAlert, List, Users, Video
 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import { useBranding } from '@/components/providers/BrandingContext';
 
 const NAV_ITEMS = [
   { key: 'dashboard', label: 'Dashboard', href: '/super-admin/dashboard', icon: LayoutDashboard },
+  { key: 'live', label: 'Live Monitor', href: '/live', icon: Video },
+  { key: 'logs', label: 'Visitor Logs', href: '/logs', icon: List },
+  { key: 'persons', label: 'Persons', href: '/persons', icon: Users },
   { key: 'clients', label: 'Clients / Tenants', href: '/super-admin/clients', icon: Building },
   { key: 'team', label: 'Admin Team', href: '/super-admin/team', icon: ShieldAlert },
   { key: 'plans', label: 'Subscription Plans', href: '/super-admin/plans', icon: CreditCard },
