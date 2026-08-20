@@ -3,8 +3,9 @@ import { prisma } from '@/lib/prisma';
 import { createClient } from '@/utils/supabase/server';
 import { cookies } from 'next/headers';
 
-export async function POST(req: Request, { params }: { params: { id: string } }) {
+export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
+    const { id } = await params;
     const cookieStore = await cookies();
     const supabase = createClient(cookieStore);
     const { data: { user } } = await supabase.auth.getUser();
@@ -23,7 +24,7 @@ export async function POST(req: Request, { params }: { params: { id: string } })
     }
 
     const bill = await prisma.bill.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
 
     if (!bill) {
@@ -36,13 +37,13 @@ export async function POST(req: Request, { params }: { params: { id: string } })
 
     // Update Bill
     const updatedBill = await prisma.bill.update({
-      where: { id: params.id },
+      where: { id },
       data: { status: 'PAID' }
     });
 
     // Update related Transaction
     await prisma.transaction.updateMany({
-      where: { billId: params.id },
+      where: { billId: id },
       data: { status: 'PAID' }
     });
 

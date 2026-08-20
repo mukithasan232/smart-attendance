@@ -122,7 +122,7 @@ yolo_model = None
 try:
     # Use YOLO-World if requested, else fallback to standard YOLO segmentation
     if os.getenv("USE_STANDARD_YOLO", "0") == "1":
-        yolo_model = YOLOEngine("yolov8n-seg")
+        yolo_model = YOLOEngine("yolov8n")
         logger.info("YOLOv8 Standard engine initialized successfully.")
     else:
         yolo_model = YOLOWorldEngine()
@@ -179,6 +179,7 @@ LATEST_FRAME_BYTES = None
 CAMERA_GLOBAL_TASK = None
 GLOBAL_CAMERA = None
 GLOBAL_CAMERA_RUNNING = True
+IS_CAMERA_ACTIVE_FLAG = False
 
 
 
@@ -218,7 +219,7 @@ async def async_unknown_alert(person_crop, timestamp):
 
 
 def global_inference_loop():
-    global IS_CAMERA_RUNNING, ACTIVE_CAMERA_URL, LATEST_FRAME_BYTES, GLOBAL_CAMERA, GLOBAL_CAMERA_RUNNING
+    global IS_CAMERA_RUNNING, ACTIVE_CAMERA_URL, LATEST_FRAME_BYTES, GLOBAL_CAMERA, GLOBAL_CAMERA_RUNNING, IS_CAMERA_ACTIVE_FLAG
     current_url = ACTIVE_CAMERA_URL
     
     # If mock mode, just output a static frame or skip hardware
@@ -236,15 +237,6 @@ def global_inference_loop():
         return
 
     try:
-        GLOBAL_CAMERA = RTSPCamera(url=current_url, max_fps=30)
-        GLOBAL_CAMERA.start()
-        IS_CAMERA_RUNNING = True
-    except Exception as e:
-        logger.error(f"Failed to open camera: {e}")
-        IS_CAMERA_RUNNING = False
-        return
-
-    try:
         frame_counter = 0
         last_result = None
         last_recognized_names = []
@@ -256,12 +248,29 @@ def global_inference_loop():
         last_alert_time = 0
         
         while GLOBAL_CAMERA_RUNNING:
-            if current_url != ACTIVE_CAMERA_URL:
-                GLOBAL_CAMERA.stop()
+            if not IS_CAMERA_ACTIVE_FLAG:
+                if GLOBAL_CAMERA:
+                    GLOBAL_CAMERA.stop()
+                    GLOBAL_CAMERA = None
+                    IS_CAMERA_RUNNING = False
+                time.sleep(0.5)
+                continue
+                
+            if GLOBAL_CAMERA is None or current_url != ACTIVE_CAMERA_URL:
+                if GLOBAL_CAMERA:
+                    GLOBAL_CAMERA.stop()
                 current_url = ACTIVE_CAMERA_URL
-                GLOBAL_CAMERA = RTSPCamera(url=current_url, max_fps=30)
-                GLOBAL_CAMERA.start()
-                IS_CAMERA_RUNNING = GLOBAL_CAMERA.is_running
+                try:
+                    GLOBAL_CAMERA = RTSPCamera(url=current_url, max_fps=30)
+                    GLOBAL_CAMERA.start()
+                    IS_CAMERA_RUNNING = GLOBAL_CAMERA.is_running
+                except Exception as e:
+                    logger.error(f"Failed to start camera {current_url}: {e}")
+                    IS_CAMERA_RUNNING = False
+                    GLOBAL_CAMERA = None
+                    time.sleep(2)
+                    continue
+                
                 if not IS_CAMERA_RUNNING:
                     time.sleep(1)
                     continue
@@ -287,8 +296,8 @@ def global_inference_loop():
                     if result and len(result.boxes) > 0:
                         boxes = result.boxes.xyxy.cpu().numpy()
                         class_ids = result.boxes.cls.cpu().numpy()
-                        recognized_names = [None] * len(boxes)
-                        colors_override = [None] * len(boxes)
+                        recognized_names: list[str | None] = [None] * len(boxes)
+                        colors_override: list[tuple[int, int, int] | None] = [None] * len(boxes)
                         current_track_boxes = []
                         
                         for i in range(len(boxes)):
@@ -362,11 +371,8 @@ def global_inference_loop():
 async def generate_frames():
     while True:
         if LATEST_FRAME_BYTES is not None:
-            yield (b'--frame
-' b'Content-Type: image/jpeg
-
-' + LATEST_FRAME_BYTES + b'
-')
+            yield (b'--frame\r\n'
+                   b'Content-Type: image/jpeg\r\n\r\n' + LATEST_FRAME_BYTES + b'\r\n')
         await asyncio.sleep(0.033) # Max ~30fps stream to client
 
 @app.get("/api/stream")
@@ -572,6 +578,22 @@ async def api_apply_camera(cam_id: str):
     ACTIVE_CAMERA_URL = cam["url"]
     ACTIVE_CAMERA_ID = cam["id"]
     return {"message": f"Applied {cam['name']}", "url": cam["url"]}
+
+
+@app.post("/api/camera/start")
+def start_camera(cam_idx: str = None):
+    global IS_CAMERA_ACTIVE_FLAG, ACTIVE_CAMERA_URL
+    IS_CAMERA_ACTIVE_FLAG = True
+    if cam_idx is not None:
+        ACTIVE_CAMERA_URL = int(cam_idx) if cam_idx.isdigit() else cam_idx
+    return {"message": "Camera started", "url": ACTIVE_CAMERA_URL}
+
+@app.post("/api/camera/stop")
+def stop_camera():
+    global IS_CAMERA_ACTIVE_FLAG
+    IS_CAMERA_ACTIVE_FLAG = False
+    return {"message": "Camera stopped"}
+
 
 
 @app.get("/api/persons")

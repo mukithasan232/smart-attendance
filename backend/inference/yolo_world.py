@@ -1,7 +1,16 @@
 import os
+import ssl
 from pathlib import Path
 from loguru import logger
 import torch
+
+# Bypass SSL certificate verification for model downloads (fixes CERTIFICATE_VERIFY_FAILED)
+try:
+    _create_unverified_https_context = ssl._create_unverified_context
+except AttributeError:
+    pass
+else:
+    ssl._create_default_https_context = _create_unverified_https_context
 
 try:
     from ultralytics import YOLOWorld
@@ -23,7 +32,11 @@ class YOLOWorldEngine:
         self.models_dir = Path(__file__).resolve().parent.parent / "models"
         self.model_path = self.models_dir / model_version
         self.device = self._detect_device()
-        self.custom_classes = custom_classes or ["person", "bamboo tree", "palm tree", "electric pole", "wire", "building", "clouds", "soil"]
+        self.custom_classes = custom_classes or [
+            "person", "face", "chair", "table", "laptop", "mobile phone", 
+            "water bottle", "window", "door", "car", "motorcycle", "tree", 
+            "building", "backpack", "cup", "book"
+        ]
         
         self.model = None
         self._initialize_model()

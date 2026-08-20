@@ -65,7 +65,7 @@ export async function middleware(request: NextRequest) {
       return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
-    if (isPrivileged && isUserRoute) {
+    if (isPrivileged && isUserRoute && !pathname.startsWith('/live')) {
       // Redirect admins trying to access user pages to their dashboard
       return NextResponse.redirect(new URL('/super-admin/dashboard', request.url));
     }

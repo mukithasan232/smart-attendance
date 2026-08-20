@@ -33,13 +33,13 @@ class RTSPCamera:
 
     def __init__(
         self,
-        url: str = RTSP_URL,
+        url: str | int = RTSP_URL,
         frame_skip: int = FRAME_SKIP,
         resize_width: int = RTSP_RESIZE_WIDTH,
         max_fps: int = RTSP_MAX_FPS,
     ) -> None:
         # Allow integer camera index (e.g., "0") or a full RTSP URL string
-        self.url = int(url) if url.isdigit() else url
+        self.url = int(url) if isinstance(url, str) and url.isdigit() else url
         self.frame_skip = max(1, frame_skip)
         self.resize_width = resize_width
         self.min_frame_interval = 1.0 / max(1, max_fps)

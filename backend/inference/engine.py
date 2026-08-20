@@ -74,7 +74,7 @@ class YOLOEngine:
         try:
             logger.info(f"Loading YOLO model from {optimized_path} onto {self.device}...")
             # Native ultralytics seamlessly supports all formats (pt, onnx, engine, coreml)
-            self.model = YOLO(str(optimized_path), task='segment')
+            self.model = YOLO(str(optimized_path))
             
             # Note: Exported models (engine, onnx, coreml) ignore the `.to()` device command 
             # as device is baked in or handled by the respective runtime (TensorRT/CoreML/ONNX). 
